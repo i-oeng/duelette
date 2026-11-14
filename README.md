@@ -1,0 +1,88 @@
+# Duelette
+
+**Spin the wheel, duel a stranger, learn something every round.**
+
+Live: **https://forteveriti.tail8331b7.ts.net/duelette/** (no sign-up needed, press play)
+
+Business Cup 2.0 · Track 02, Entertainment · B2C · web only
+
+## The problem
+
+US adults aged 25 to 45 spend their short breaks (the commute, lunch, the ten minutes after the kids fall asleep) scrolling, and come away feeling the time was wasted. Duelette turns five minutes of downtime into a competitive game that leaves you a little smarter: real opponents, real stakes, and a lesson in every answer.
+
+## What you play
+
+Each round you spin a wheel:
+
+| Wedge | What happens | What you learn |
+|---|---|---|
+| **Trivia Blitz** | 3 quick questions; faster right answers score more | A one-line "why" after every answer |
+| **Ballpark** | Estimate a number ("how far is the Moon", "what does 1,000 tenge of groceries cost after 5 years at 10% inflation") | The real number, how far off you were, and why |
+| **Code Sprint** | Write one JavaScript function against live tests | Your code side by side with a model solution (and your opponent's) |
+| **Jackpot** | Doubles the next challenge and spins again | |
+| **Chaos** | A random challenge with a twist (Sudden Death, Bullseye, No Loops...) | |
+
+Five spins make a game, about five minutes.
+
+## Modes
+
+- **Daily Duel**: the same five spins for everyone today, free once a day, with a daily leaderboard and a shareable result.
+- **Solo run**: chase your best score and the world solo board.
+- **Find a match**: random matchmaking with an Elo world rating. If nobody is around after 12 seconds, a clearly labelled practice bot steps in (unranked).
+- **Challenge a friend**: send a link; the duel starts the moment they open it. Friendly matches don't change ratings.
+
+## Why people come back
+
+- **Daily streaks** for finishing at least one game a day, shown on the profile and the result screen.
+- **Mastery meters** per topic (Finance, History, Science, Geography, Tech, Culture): the chance you'd answer a typical question right, and how far it moved since you started.
+- **Questions that fit you**: every question carries a difficulty rating that moves like a chess rating, and each player gets questions they answer right about 65% of the time.
+- Badges, jackpots, win streaks and a world ranking.
+
+## Business model
+
+- **Free**: the Daily Duel plus 3 games a day. Guests can play instantly and save their progress later.
+- **Paid** (Lemon Squeezy, merchant of record): **Mensis** $4.99 a month or **Annum** $39.99 a year. Unlimited games, Streak Freeze (one missed day a week is forgiven), and a Member badge.
+- Growth: friend challenge links and shareable Daily Duel results bring new players for free.
+
+## Fair play: scores can't be faked
+
+The server runs every game; the browser only sends actions.
+
+- Answers never reach the browser; timing is measured on the server clock.
+- Submitted code is re-run on the server inside a bubblewrap sandbox (no network, no file access) against visible **and hidden** tests, so hardcoding the visible answers fails.
+- The production question bank (`content.json`) stays private so nobody can read the answers. This repo ships `content.sample.json`, which the server uses automatically.
+- Accounts use salted PBKDF2 passwords, session tokens stored only as hashes, and one-time recovery codes. Guest duels and bot or friend matches never move ratings.
+
+## Architecture
+
+```
+browser (index.html, style.css, js/*.js: vanilla, no build step)
+   |  HTTPS + server-sent events
+server.py   HTTP API and event stream (Python standard library only)
+engine.py   game engine: matchmaking, rooms, practice bot, Daily Duel, scoring
+accounts.py SQLite: accounts, sessions, ratings, streaks, plans, question difficulty, mastery
+judge.py    estimation scoring and sandboxed code checks (sandbox/runner.js inside bubblewrap)
+billing.py  Lemon Squeezy checkout and signed webhooks
+admin.py    backups, gift codes, password resets, stats
+```
+
+Production runs on an Ubuntu machine as a systemd user service behind Tailscale Funnel, with automatic database backups every 6 hours.
+
+## Run it locally
+
+```bash
+python3 server.py              # http://127.0.0.1:8787, uses content.sample.json
+```
+
+Python 3.9 or newer, no packages needed. Code checks need `bwrap` and `node`; on a development machine without bubblewrap, set `DUELETTE_UNSAFE_LOCAL=1` to run them unsandboxed (development only).
+
+Optional settings: `PORT`, `DATA_DIR`, `DUELETTE_TZ` (default `America/New_York`), `DUELETTE_FREE_GAMES` (default 3), and for billing `LEMONSQUEEZY_API_KEY`, `LEMONSQUEEZY_STORE_ID`, `LEMONSQUEEZY_VARIANT_ID`, `LEMONSQUEEZY_ANNUAL_VARIANT_ID`, `LEMONSQUEEZY_WEBHOOK_SECRET`.
+
+## Admin
+
+```bash
+python3 admin.py stats                 # accounts, members, games today
+python3 admin.py backup                # copy the database to ./backups
+python3 admin.py codes 10 --days 30    # one-time gift codes
+python3 admin.py reset-password NAME   # temporary password for a locked-out player
+```

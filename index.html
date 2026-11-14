@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<title>Duelette</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 12C75 12 88 30 88 54C88 78 72 90 50 90C28 90 12 78 12 54C12 30 25 12 50 12Z' fill='%23ff2e63' stroke='%231b1035' stroke-width='7'/%3E%3Ccircle cx='38' cy='48' r='9' fill='%23fff'/%3E%3Ccircle cx='62' cy='48' r='9' fill='%23fff'/%3E%3Ccircle cx='39' cy='49' r='4.5' fill='%231b1035'/%3E%3Ccircle cx='63' cy='49' r='4.5' fill='%231b1035'/%3E%3C/svg%3E">
+<meta name="description" content="Spin the wheel and duel a random player in code, estimation and trivia, or chase your best solo score. Learn something every round.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Duelette">
+<meta property="og:title" content="Duelette: spin, duel, climb the world ranking">
+<meta property="og:description" content="Out-code, out-guess and out-think a random player online. No sign-up needed: learn something every round and climb the world ranking.">
+<meta property="og:url" content="https://forteveriti.tail8331b7.ts.net/duelette/">
+<meta property="og:image" content="https://forteveriti.tail8331b7.ts.net/duelette/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Duelette logo above a colorful challenge wheel">
+<meta name="twitter:card" content="summary_large_image">
+<script>
+  // Relative asset paths need a trailing slash when served under /duelette.
+  if (/^https?:$/.test(location.protocol) && !/(\/|\.html)$/.test(location.pathname)) {
+    location.replace(location.pathname + "/" + location.search + location.hash);
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="style.css">
+
+<div class="sunburst" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+
+<div id="app">
+  <header class="topbar">
+    <button id="homeBtn" class="logo-mini" type="button" aria-label="Duelette home">Duelette</button>
+    <div class="top-actions">
+      <button id="quitBtn" class="btn btn-sm btn-quit" type="button" hidden>Quit run</button>
+      <button id="rankBtn" class="btn btn-sm" type="button">World ranking</button>
+      <button id="muteBtn" class="btn btn-sm" type="button" aria-pressed="true">Sound: On</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Home -->
+    <section id="scr-home" class="screen" aria-labelledby="logo">
+      <h1 class="logo" id="logo" aria-label="Duelette"></h1>
+      <p class="tagline">Spin the wheel, take the dare. Out-code, out-guess and out-think a stranger, and learn something every round.</p>
+
+      <div class="pcard invite-card" id="inviteCard" hidden>
+        <div class="invite-row"><span class="me-av" id="inviteAv"></span>
+          <div><h2 class="legacy-title" id="inviteTitle">You've been challenged!</h2>
+          <p class="legacy-sub">A friendly duel: same challenges for both of you, best score wins.</p></div></div>
+        <div class="card-actions invite-actions">
+          <button class="btn btn-big btn-go pulse" id="inviteAccept" type="button">Accept challenge</button>
+          <button class="btn btn-ghost" id="inviteSkip" type="button">Not now</button>
+        </div>
+      </div>
+
+      <div class="pcard legacy-card" id="legacyCard" hidden>
+        <h2 class="legacy-title" id="legacyTitle">Welcome back!</h2>
+        <p class="legacy-sub" id="legacySub"></p>
+        <form id="legacyForm" class="guest-form legacy-form" novalidate>
+          <div class="field"><label for="legacyPass" class="field-label">Choose a password</label>
+            <input id="legacyPass" class="name-input" type="password" maxlength="128" autocomplete="new-password"></div>
+          <button class="btn btn-go" id="legacySubmit" type="submit">Claim my name</button>
+        </form>
+        <p class="form-msg" id="legacyMsg" role="alert"></p>
+      </div>
+
+      <div class="pcard auth-card" id="authCard" hidden>
+        <h2 class="sr-only">Your account</h2>
+        <div class="tabs" role="tablist" aria-label="Account">
+          <button class="tab" role="tab" id="tabLogin" aria-selected="true" type="button">Log in</button>
+          <button class="tab" role="tab" id="tabSignup" aria-selected="false" type="button">Create account</button>
+        </div>
+        <form id="authForm" class="auth-form" novalidate>
+          <label for="authName" class="field-label">Name</label>
+          <input id="authName" class="name-input" maxlength="16" autocomplete="username" spellcheck="false" autocapitalize="off" required>
+          <p class="field-help" id="nameHelp" hidden>3 to 16 letters, numbers or underscores. Your name is permanent and shows on the world ranking.</p>
+          <div id="codeRow" class="field" hidden>
+            <label for="authCode" class="field-label">Recovery code</label>
+            <input id="authCode" class="name-input mono" maxlength="24" autocomplete="off" spellcheck="false" placeholder="ABCD-EFGH-JKLM-NPQR">
+          </div>
+          <label for="authPass" class="field-label" id="passLabel">Password</label>
+          <input id="authPass" class="name-input" type="password" maxlength="128" autocomplete="current-password" required>
+          <div class="avatars" id="signupAvatars" role="group" aria-label="Pick your critter" hidden></div>
+          <p class="form-msg" id="authMsg" role="alert"></p>
+          <button class="btn btn-big btn-go" id="authSubmit" type="submit">Log in</button>
+          <button class="text-btn" id="forgotBtn" type="button">Forgot your password?</button>
+        </form>
+      </div>
+
+      <div class="pcard me-card" id="meCard" hidden>
+        <h2 class="sr-only">Your profile</h2>
+        <div class="me-row">
+          <span class="me-av" id="meAv"></span>
+          <div class="me-text"><div class="me-name"><span id="meName"></span> <span class="streak-chip" id="streakChip" hidden></span></div><div class="me-stats" id="meStats"></div></div>
+          <button class="btn btn-sm btn-ghost" id="logoutBtn" type="button">Log out</button>
+        </div>
+        <div class="guest-box" id="guestBox" hidden>
+          <p class="guest-title"><b>Playing as a guest.</b> Save your progress to keep your mastery and best scores and to join the world ranking.</p>
+          <form id="upgradeForm" class="guest-form" novalidate>
+            <div class="field"><label for="upName" class="field-label">Pick a name</label>
+              <input id="upName" class="name-input" maxlength="16" autocomplete="username" spellcheck="false" autocapitalize="off"></div>
+            <div class="field"><label for="upPass" class="field-label">Password</label>
+              <input id="upPass" class="name-input" type="password" maxlength="128" autocomplete="new-password"></div>
+            <button class="btn btn-go" id="upSubmit" type="submit">Save my progress</button>
+          </form>
+          <p class="form-msg" id="upMsg" role="alert"></p>
+          <button class="text-btn" id="toLoginBtn" type="button">Have an account? Log in</button>
+        </div>
+        <p class="plan-line" id="planLine" hidden></p>
+        <div class="mastery" id="mastery"></div>
+        <details class="critter-pick" id="renameBox"><summary>Change your name</summary>
+          <form id="renameForm" class="guest-form rename-form" novalidate>
+            <div class="field"><label for="newName" class="field-label">New name</label>
+              <input id="newName" class="name-input" maxlength="16" autocomplete="username" spellcheck="false" autocapitalize="off"></div>
+            <div class="field"><label for="renamePass" class="field-label">Your password</label>
+              <input id="renamePass" class="name-input" type="password" maxlength="128" autocomplete="current-password"></div>
+            <button class="btn btn-go" id="renameSubmit" type="submit">Save name</button>
+          </form>
+          <p class="field-help" id="renameHelp">3 to 16 letters, numbers or underscores. Your rating, scores and plan come with you. You can change it once a week.</p>
+          <p class="form-msg" id="renameMsg" role="alert"></p>
+        </details>
+        <details class="critter-pick"><summary>Change your critter</summary>
+          <div class="avatars" id="avatars" role="group" aria-label="Change your critter"></div>
+        </details>
+      </div>
+
+      <div class="daily-card" id="dailyCard" hidden></div>
+
+      <div class="modes">
+        <button class="mode-card" id="soloBtn" type="button" style="--mc: var(--code)" disabled>
+          <span class="mode-ic" data-icon="sparkle"></span>
+          <span class="mode-name">Solo run</span>
+          <span class="mode-desc">Five spins against the clock. Chase your best and the world solo board.</span>
+        </button>
+        <button class="mode-card" id="matchBtn" type="button" style="--mc: var(--p2)" disabled>
+          <span class="mode-ic" data-icon="globe"></span>
+          <span class="mode-name">Find a match</span>
+          <span class="mode-desc">Get paired with a random player online. Win to climb the world rating.</span>
+        </button>
+        <button class="mode-card" id="friendBtn" type="button" style="--mc: var(--draw)" disabled>
+          <span class="mode-ic" data-icon="bolt"></span>
+          <span class="mode-name">Challenge a friend</span>
+          <span class="mode-desc">Send a link, play head to head. No sign-up needed for them.</span>
+        </button>
+      </div>
+      <p class="mode-note" id="modeNote" role="status">No account needed: press play and you're in. Create an account to save your progress and join the world ranking.</p>
+      <p class="mode-note" id="offlineNote" hidden>This is an offline copy. Open the hosted link to play: the server runs and judges every game.</p>
+      <p class="keys-hint"><kbd>Space</kbd> spins · <kbd>1</kbd> to <kbd>4</kbd> answer trivia · <kbd>Ctrl</kbd> + <kbd>Enter</kbd> runs code</p>
+    </section>
+
+    <!-- Arena -->
+    <section id="scr-arena" class="screen" aria-label="Game" hidden>
+      <h2 class="sr-only">Game in progress</h2>
+      <div class="hud">
+        <div class="plate" data-p="0" id="plate0"></div>
+        <div class="round-pill">
+          <span id="roundTxt">Round 1 of 5</span>
+          <span id="multTxt" class="mult" hidden>Jackpot: score x2</span>
+        </div>
+        <div class="plate" data-p="1" id="plate1"></div>
+      </div>
+      <div class="stage" id="stage">
+        <div id="wheelView" class="wheel-view">
+          <div class="spin-label" id="spinLabel" aria-live="polite">Your spin</div>
+          <div class="wheel-wrap">
+            <canvas id="wheel" aria-label="Challenge wheel" role="img"></canvas>
+          </div>
+          <button id="spinBtn" class="btn btn-big btn-go" type="button">Spin!</button>
+        </div>
+        <div id="panel" class="panel" hidden></div>
+      </div>
+    </section>
+
+    <!-- Final -->
+    <section id="scr-final" class="screen" aria-label="Result" hidden></section>
+
+    <!-- World ranking -->
+    <section id="scr-rank" class="screen" aria-labelledby="rankTitle" hidden>
+      <div class="card rank-card">
+        <div class="card-head rank-head">
+          <h2 class="cat-tag" id="rankTitle"><span class="cat-ic" data-icon="crown"></span>World ranking</h2>
+          <button class="btn btn-sm" id="rankBack" type="button">Back</button>
+        </div>
+        <div class="card-body">
+          <div class="tabs" role="tablist" aria-label="Ranking boards">
+            <button class="tab" role="tab" id="tabToday" aria-selected="false" type="button">Today</button>
+          <button class="tab" role="tab" id="tabDuel" aria-selected="true" type="button">Duel rating</button>
+            <button class="tab" role="tab" id="tabSolo" aria-selected="false" type="button">Solo best</button>
+          </div>
+          <p class="card-sub" id="rankNote">Ratings start at 1000. Beating a stronger player moves you up faster.</p>
+          <div class="rank-wrap" id="rankList" role="tabpanel"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="card overlay-card" role="dialog" aria-modal="true" aria-labelledby="ovTitle">
+    <div class="card-body center">
+      <h2 class="card-title" id="ovTitle">Save your recovery code</h2>
+      <p class="card-sub">It is the only way back into your account if you forget your password, and it is shown just this once. Keep it somewhere safe.</p>
+      <code class="recovery" id="ovCode"></code>
+    </div>
+    <div class="card-actions">
+      <button class="btn" id="ovCopy" type="button">Copy code</button>
+      <button class="btn btn-go" id="ovDone" type="button">I saved it</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="paywall" hidden>
+  <div class="card overlay-card paywall-card" role="dialog" aria-modal="true" aria-labelledby="pwTitle">
+    <div class="card-head pro-head"><h2 class="cat-tag" id="pwTitle"><span class="cat-ic" data-icon="crown"></span>Go unlimited</h2></div>
+    <div class="card-body">
+      <p class="card-sub" id="pwSub"></p>
+      <ul class="pro-list">
+        <li>Unlimited solo runs and duels, every day</li>
+        <li>A Member badge next to your name on the world ranking</li>
+        <li>Supports new questions, topics and challenges</li>
+      </ul>
+      <p class="pro-price" id="pwPrice" hidden></p>
+      <p class="pw-guest" id="pwGuest" hidden>Plans need a free account, so your subscription is never lost.
+        <button class="btn btn-go" id="pwSave" type="button">Save my progress first</button></p>
+      <div class="plan-pick" id="planPick" role="group" aria-label="Choose a plan" hidden></div>
+      <button class="btn btn-big btn-jack" id="pwCheckout" type="button" hidden>Subscribe</button>
+      <p class="pw-soon" id="pwSoon">Card payments open soon. Have a gift code? Enter it below.</p>
+      <form id="pwForm" class="pw-form" novalidate>
+        <label for="pwCode" class="field-label">Have a gift code?</label>
+        <div class="pw-row">
+          <input id="pwCode" class="name-input mono" maxlength="24" autocomplete="off" spellcheck="false" placeholder="Gift code">
+          <button class="btn btn-go" id="pwRedeem" type="submit">Redeem</button>
+        </div>
+        <p class="form-msg bad" id="pwMsg" role="alert"></p>
+      </form>
+    </div>
+    <div class="card-actions"><button class="btn btn-ghost" id="pwClose" type="button">Maybe later</button></div>
+  </div>
+</div>
+
+<div id="banner" class="banner" aria-live="assertive" hidden></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script src="js/data.js"></script>
+<script src="js/art.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/wheel.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/net.js"></script>
+<script src="js/games.js"></script>
+<script src="js/game.js"></script>

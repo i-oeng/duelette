@@ -1,0 +1,11 @@
+# runtime data and secrets
+data/
+backups/
+secrets.env
+*.db
+*.db-shm
+*.db-wal
+# the production question bank stays private (answers and hidden tests); content.sample.json is the public sample
+content.json
+__pycache__/
+.playwright-cli/

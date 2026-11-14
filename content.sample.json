@@ -1,0 +1,470 @@
+{
+ "_note": "Sample bank so the repo runs out of the box. The production bank (content.json) stays private so players cannot read the answers.",
+ "topics": {
+  "finance": "Finance",
+  "history": "History",
+  "science": "Science",
+  "geography": "Geography",
+  "tech": "Tech",
+  "culture": "Culture"
+ },
+ "trivia": {
+  "finance": [
+   {
+    "q": "What does IPO stand for?",
+    "a": "Initial Public Offering",
+    "w": [
+     "International Price Order",
+     "Internal Profit Option",
+     "Initial Purchase Obligation"
+    ],
+    "id": "t-fin-01",
+    "why": "An IPO is when a private company first sells its shares to the public on a stock exchange."
+   },
+   {
+    "q": "In a bear market, prices are generally...",
+    "a": "Falling",
+    "w": [
+     "Rising",
+     "Frozen",
+     "Doubling"
+    ],
+    "id": "t-fin-02",
+    "why": "A bear market usually means prices fell 20% or more from a recent high. Bears swipe down, bulls charge up."
+   }
+  ],
+  "history": [
+   {
+    "q": "In which year did World War II end?",
+    "a": "1945",
+    "w": [
+     "1939",
+     "1944",
+     "1950"
+    ],
+    "id": "t-his-01",
+    "why": "Germany surrendered in May 1945 and Japan in September 1945."
+   },
+   {
+    "q": "Who was the first person to walk on the Moon?",
+    "a": "Neil Armstrong",
+    "w": [
+     "Buzz Aldrin",
+     "Yuri Gagarin",
+     "Michael Collins"
+    ],
+    "id": "t-his-02",
+    "why": "Neil Armstrong stepped onto the Moon in July 1969. Buzz Aldrin followed minutes later."
+   }
+  ],
+  "science": [
+   {
+    "q": "Which planet has the most known moons?",
+    "a": "Saturn",
+    "w": [
+     "Jupiter",
+     "Uranus",
+     "Neptune"
+    ],
+    "id": "t-sci-01",
+    "why": "Saturn passed 270 known moons after 128 new ones were confirmed in 2025, far ahead of Jupiter."
+   },
+   {
+    "q": "How many hearts does an octopus have?",
+    "a": "3",
+    "w": [
+     "1",
+     "2",
+     "4"
+    ],
+    "id": "t-sci-02",
+    "why": "Two hearts pump blood through the gills and a third pumps it to the rest of the body."
+   }
+  ],
+  "geography": [
+   {
+    "q": "Which letter appears in no US state name?",
+    "a": "Q",
+    "w": [
+     "J",
+     "Z",
+     "X"
+    ],
+    "id": "t-geo-01",
+    "why": "Q is the only letter missing from every US state name. J appears in New Jersey."
+   },
+   {
+    "q": "Which country spans the most time zones, counting overseas territories?",
+    "a": "France",
+    "w": [
+     "Russia",
+     "USA",
+     "China"
+    ],
+    "id": "t-geo-02",
+    "why": "Its territories from Polynesia to Réunion give France 12 time zones."
+   }
+  ],
+  "tech": [
+   {
+    "q": "Which language did Brendan Eich create in about 10 days?",
+    "a": "JavaScript",
+    "w": [
+     "Java",
+     "Python",
+     "Ruby"
+    ],
+    "id": "t-tec-01",
+    "why": "Brendan Eich wrote the first JavaScript in about 10 days at Netscape in 1995."
+   },
+   {
+    "q": "In which year did the first iPhone launch?",
+    "a": "2007",
+    "w": [
+     "2005",
+     "2009",
+     "2010"
+    ],
+    "id": "t-tec-02",
+    "why": "Steve Jobs unveiled the iPhone in January 2007 and it went on sale that June."
+   }
+  ],
+  "culture": [
+   {
+    "q": "Which painter cut off part of his own ear?",
+    "a": "Van Gogh",
+    "w": [
+     "Picasso",
+     "Dalí",
+     "Monet"
+    ],
+    "id": "t-cul-01",
+    "why": "Vincent van Gogh cut off part of his left ear in 1888 after a quarrel with Paul Gauguin."
+   },
+   {
+    "q": "Which game character first appeared under the name Jumpman?",
+    "a": "Mario",
+    "w": [
+     "Link",
+     "Sonic",
+     "Pac-Man"
+    ],
+    "id": "t-cul-02",
+    "why": "Mario debuted as Jumpman in Donkey Kong in 1981 and got his famous name soon after."
+   }
+  ]
+ },
+ "guess": [
+  {
+   "id": "g-fin-01",
+   "t": "finance",
+   "q": "How old was Warren Buffett when he bought his first stock?",
+   "a": 11,
+   "unit": "years old",
+   "min": 5,
+   "max": 40,
+   "scale": "lin",
+   "tol": 15,
+   "step": 1,
+   "why": "He bought three shares of Cities Service in 1942, at age 11."
+  },
+  {
+   "id": "g-his-01",
+   "t": "history",
+   "q": "In what year was the first email sent between computers?",
+   "a": 1971,
+   "unit": "",
+   "min": 1900,
+   "max": 2010,
+   "scale": "lin",
+   "tol": 40,
+   "step": 1,
+   "why": "Ray Tomlinson sent the first networked email on ARPANET in 1971 and picked the @ sign."
+  },
+  {
+   "id": "g-sci-01",
+   "t": "science",
+   "q": "How far is the Moon from Earth, on average?",
+   "a": 384400,
+   "unit": "km",
+   "min": 10000,
+   "max": 10000000,
+   "scale": "log",
+   "tol": 3,
+   "step": 100,
+   "why": "About 384,400 km, roughly 30 Earths lined up side by side."
+  },
+  {
+   "id": "g-geo-01",
+   "t": "geography",
+   "q": "How many people live in Almaty?",
+   "a": 2200000,
+   "unit": "people",
+   "min": 100000,
+   "max": 20000000,
+   "scale": "log",
+   "tol": 2,
+   "step": 1,
+   "why": "Almaty passed 2 million residents in 2021 and is Kazakhstan's largest city."
+  },
+  {
+   "id": "g-tec-01",
+   "t": "tech",
+   "q": "In what year did the first website go online?",
+   "a": 1991,
+   "unit": "",
+   "min": 1960,
+   "max": 2010,
+   "scale": "lin",
+   "tol": 30,
+   "step": 1,
+   "why": "Tim Berners-Lee put info.cern.ch online in August 1991."
+  },
+  {
+   "id": "g-cul-01",
+   "t": "culture",
+   "q": "How long is a marathon?",
+   "a": 42.195,
+   "unit": "km",
+   "min": 10,
+   "max": 100,
+   "scale": "lin",
+   "tol": 25,
+   "step": 0.1,
+   "why": "42.195 km, fixed in 1921 after the route of the 1908 London Olympics."
+  }
+ ],
+ "code": [
+  {
+   "fn": "reverse",
+   "args": "s",
+   "title": "Flip it",
+   "prompt": "Return the string reversed.",
+   "tests": [
+    [
+     [
+      "hello"
+     ],
+     "olleh"
+    ],
+    [
+     [
+      ""
+     ],
+     ""
+    ],
+    [
+     [
+      "ab c"
+     ],
+     "c ba"
+    ]
+   ],
+   "hidden": [
+    [
+     [
+      "racecar"
+     ],
+     "racecar"
+    ],
+    [
+     [
+      "Duelette!"
+     ],
+     "!etteleuD"
+    ]
+   ],
+   "model": "function reverse(s) {\n  return [...s].reverse().join(\"\");\n}"
+  },
+  {
+   "fn": "sumAll",
+   "args": "nums",
+   "title": "Add it all up",
+   "prompt": "Return the sum of an array of numbers. An empty array sums to 0.",
+   "tests": [
+    [
+     [
+      [
+       1,
+       2,
+       3
+      ]
+     ],
+     6
+    ],
+    [
+     [
+      []
+     ],
+     0
+    ],
+    [
+     [
+      [
+       -5,
+       5,
+       10
+      ]
+     ],
+     10
+    ]
+   ],
+   "hidden": [
+    [
+     [
+      [
+       0.5,
+       0.5,
+       1
+      ]
+     ],
+     2
+    ],
+    [
+     [
+      [
+       100
+      ]
+     ],
+     100
+    ]
+   ],
+   "model": "function sumAll(nums) {\n  return nums.reduce((total, n) => total + n, 0);\n}"
+  },
+  {
+   "fn": "countVowels",
+   "args": "s",
+   "title": "Vowel counter",
+   "prompt": "Count the vowels a, e, i, o, u in any case.",
+   "tests": [
+    [
+     [
+      "Duelette"
+     ],
+     4
+    ],
+    [
+     [
+      "rhythm"
+     ],
+     0
+    ],
+    [
+     [
+      "AEIOU"
+     ],
+     5
+    ]
+   ],
+   "hidden": [
+    [
+     [
+      "Programming"
+     ],
+     3
+    ],
+    [
+     [
+      "xyz"
+     ],
+     0
+    ]
+   ],
+   "model": "function countVowels(s) {\n  return (s.match(/[aeiou]/gi) || []).length;\n}"
+  },
+  {
+   "fn": "isPalindrome",
+   "args": "s",
+   "title": "Palindrome check",
+   "prompt": "Return true if the text reads the same both ways, ignoring case and spaces.",
+   "tests": [
+    [
+     [
+      "Racecar"
+     ],
+     true
+    ],
+    [
+     [
+      "hello"
+     ],
+     false
+    ],
+    [
+     [
+      "never odd or even"
+     ],
+     true
+    ]
+   ],
+   "hidden": [
+    [
+     [
+      "A man a plan a canal Panama"
+     ],
+     true
+    ],
+    [
+     [
+      "ab"
+     ],
+     false
+    ]
+   ],
+   "model": "function isPalindrome(s) {\n  const t = s.toLowerCase().replace(/ /g, \"\");\n  return t === [...t].reverse().join(\"\");\n}"
+  }
+ ],
+ "mods": {
+  "code": [
+   {
+    "id": "noloops",
+    "label": "No loops",
+    "desc": "for and while are banned. Get creative."
+   },
+   {
+    "id": "oneliner",
+    "label": "One-liner",
+    "desc": "Your whole solution must fit on a single line."
+   },
+   {
+    "id": "half",
+    "label": "Half time",
+    "desc": "Only 45 seconds on the clock."
+   }
+  ],
+  "trivia": [
+   {
+    "id": "speed",
+    "label": "Speed round",
+    "desc": "5 seconds per question. Buzz fast."
+   },
+   {
+    "id": "sudden",
+    "label": "Sudden death",
+    "desc": "Wrong answers cost 50 points."
+   },
+   {
+    "id": "extra",
+    "label": "Overtime",
+    "desc": "4 questions instead of 3."
+   }
+  ],
+  "guess": [
+   {
+    "id": "speed",
+    "label": "Speed round",
+    "desc": "8 seconds per guess."
+   },
+   {
+    "id": "bullseye",
+    "label": "Bullseye",
+    "desc": "Only close guesses score, but they score 1.5 times as much."
+   },
+   {
+    "id": "extra",
+    "label": "Overtime",
+    "desc": "4 questions instead of 3."
+   }
+  ]
+ }
+}
