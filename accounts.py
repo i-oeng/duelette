@@ -47,6 +47,55 @@ except Exception:  # no time zone database: fall back to a fixed offset
 DAY_OFFSET = -5 * 3600
 LAUNCH_DAY = date(2026, 11, 14)  # Daily Duel #1
 ITEM_K = 12
+
+# ------------------------------------------------------------------ progress
+
+# Daily quests: the same three for everyone each day. (id, label, stat counted, target)
+QUESTS = {
+    "games3": ("Finish 3 games", "games", 3),
+    "daily": ("Play today's Daily Duel", "daily", 1),
+    "trivia8": ("Get 8 trivia answers right", "right_trivia", 8),
+    "math3": ("Solve 3 Money Math problems", "right_math", 3),
+    "scam4": ("Call 4 Spot the Scam messages right", "right_scam", 4),
+    "myth4": ("Call 4 myths or facts right", "right_myth", 4),
+    "first4": ("Put 4 pairs of events in order", "right_first", 4),
+    "ballpark2": ("Make 2 Ballpark guesses with 80%+ accuracy", "est_close", 2),
+    "rounds3": ("Win 3 duel rounds", "rounds_won", 3),
+    "jackpot": ("Hit a Jackpot", "jackpots", 1),
+    "score600": ("Score 600 or more in one game", "score600", 1),
+    "code1": ("Solve a Code Sprint", "code_solved", 1),
+}
+STARTER_QUESTS = ["games3", "daily"]
+QUEST_XP, ALL_QUESTS_XP = 50, 100
+# Badges kept on the account. Game badges come from the engine; the last three are milestones.
+BADGES = ["firstBlood", "hatTrick", "unstoppable", "bigBrain", "speedDemon", "cleanCode", "sharpshooter", "scamBuster",
+          "mythBuster", "timeLord", "mathWhiz", "jackpotJunkie", "comeback", "champion", "streak7", "level5", "questMaster"]
+# Critters: the first four are free, the rest unlock. (kind, threshold)
+FREE_CRITTERS = ["c0", "c1", "c2", "c3"]
+CRITTER_UNLOCKS = {"c4": ("level", 3), "c5": ("level", 5), "c6": ("streak", 7), "c7": ("level", 8)}
+
+
+def level_for(xp):
+    """Level 1 at 0 XP, 2 at 100, 3 at 300, 4 at 600, 5 at 1,000: each level needs 100 more than the last."""
+    return int((1 + (1 + 8 * max(0, xp) / 100.0) ** 0.5) / 2)
+
+
+def level_floor(level):
+    return 50 * level * (level - 1)
+
+
+def quests_for(day):
+    rng = __import__("random").Random("duelette-quests-" + day)
+    rest = sorted(k for k in QUESTS if k not in STARTER_QUESTS)
+    return [rng.choice(STARTER_QUESTS)] + rng.sample(rest, 2)
+
+
+def critters_unlocked(level, best_streak):
+    out = list(FREE_CRITTERS)
+    for cid, (kind, need) in sorted(CRITTER_UNLOCKS.items()):
+        if (level if kind == "level" else best_streak) >= need:
+            out.append(cid)
+    return out
 GUESTS_PER_IP_PER_DAY = 12
 GUESTS_PER_HOUR = 600
 SUB_GRACE = 2 * 86400
@@ -134,9 +183,12 @@ class Store:
                           ("sub_id", "TEXT"), ("sub_status", "TEXT"), ("sub_until", "REAL NOT NULL DEFAULT 0"),
                           ("legacy_hash", "TEXT"), ("renamed_at", "REAL NOT NULL DEFAULT 0"),
                           ("streak", "INTEGER NOT NULL DEFAULT 0"), ("streak_day", "TEXT"),
-                          ("best_streak", "INTEGER NOT NULL DEFAULT 0"), ("freeze_week", "TEXT")):
+                          ("best_streak", "INTEGER NOT NULL DEFAULT 0"), ("freeze_week", "TEXT"),
+                          ("xp", "INTEGER NOT NULL DEFAULT 0"), ("badges", "TEXT NOT NULL DEFAULT ''")):
             if name not in cols:
                 self.db.execute("ALTER TABLE accounts ADD COLUMN %s %s" % (name, ddl))
+        self.db.execute("CREATE TABLE IF NOT EXISTS quest_log (key TEXT NOT NULL, day TEXT NOT NULL, quest TEXT NOT NULL, "
+                        "progress INTEGER NOT NULL, PRIMARY KEY (key, day, quest))")
         self.db.execute("CREATE TABLE IF NOT EXISTS checkouts (ref TEXT PRIMARY KEY, key TEXT NOT NULL, created REAL NOT NULL)")
         self.db.execute("CREATE TABLE IF NOT EXISTS daily_scores (day TEXT NOT NULL, key TEXT NOT NULL, score INTEGER NOT NULL, "
                         "ts REAL NOT NULL, PRIMARY KEY (day, key))")
@@ -173,7 +225,7 @@ class Store:
                 return None, "taken", None
             self.db.execute(
                 "INSERT INTO accounts (key, name, avatar, pass_salt, pass_hash, recovery_hash, created) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (name.lower(), name, avatar if AVATAR_RE.match(avatar or "") else "c0", salt, digest,
+                (name.lower(), name, avatar if avatar in FREE_CRITTERS else "c0", salt, digest,
                  _sha(_norm_code(recovery)), now))
             self.db.commit()
             self.signups.append(now)
@@ -196,7 +248,7 @@ class Store:
                     break
             self.db.execute("INSERT INTO accounts (key, name, avatar, pass_salt, pass_hash, recovery_hash, created, guest) "
                             "VALUES (?, ?, ?, ?, ?, '', ?, 1)",
-                            (key, name, avatar if AVATAR_RE.match(avatar or "") else "c0", b"", b"", now))
+                            (key, name, avatar if avatar in FREE_CRITTERS else "c0", b"", b"", now))
             self.db.commit()
             self.guest_log.append((now, ip))
             return self.profile(key), self._session(key)
@@ -281,6 +333,10 @@ class Store:
             if row:
                 guest = self.db.execute("SELECT guest FROM accounts WHERE key = ?", (key,)).fetchone()["guest"]
                 out["score"] = row["score"]
+                total = self.db.execute("SELECT COUNT(*) FROM daily_scores WHERE day = ?", (day,)).fetchone()[0]
+                below = self.db.execute("SELECT COUNT(*) FROM daily_scores WHERE day = ? AND score < ?", (day, row["score"])).fetchone()[0]
+                out["total"] = total
+                out["beat"] = round(100 * below / (total - 1)) if total > 1 else None
                 out["rank"] = None if guest else self.db.execute(
                     "SELECT COUNT(*) + 1 FROM daily_scores d JOIN accounts a ON a.key = d.key "
                     "WHERE d.day = ? AND a.guest = 0 AND d.score > ?", (day, row["score"])).fetchone()[0]
@@ -501,6 +557,9 @@ class Store:
         if not AVATAR_RE.match(avatar or ""):
             return False
         with self.lock:
+            r = self.db.execute("SELECT avatar, xp, best_streak FROM accounts WHERE key = ?", (key,)).fetchone()
+            if not r or (avatar != r["avatar"] and avatar not in critters_unlocked(level_for(r["xp"]), r["best_streak"])):
+                return False
             self.db.execute("UPDATE accounts SET avatar = ? WHERE key = ?", (avatar, key))
             self.db.commit()
         return True
@@ -687,7 +746,69 @@ class Store:
                     "rank": self._duel_rank(r["rating"]) if played and ranked else None,
                     "soloBest": r["solo_best"], "soloRuns": r["solo_runs"],
                     "soloRank": self._solo_rank(r["solo_best"]) if r["solo_runs"] and ranked else None,
-                    "plan": plan, "mastery": self.mastery(key)}
+                    "plan": plan, "mastery": self.mastery(key), "progress": self._progress_view(r)}
+
+    # ---------------------------------------------------------- progress: XP, quests, badges, critters
+
+    def _quest_view(self, key, day):
+        rows = {q["quest"]: q["progress"] for q in self.db.execute(
+            "SELECT quest, progress FROM quest_log WHERE key = ? AND day = ?", (key, day))}
+        out = []
+        for qid in quests_for(day):
+            label, _, target = QUESTS[qid]
+            got = min(target, rows.get(qid, 0))
+            out.append({"id": qid, "label": label, "progress": got, "target": target, "done": got >= target})
+        return out, bool(rows.get("_all"))
+
+    def _progress_view(self, r):
+        level = level_for(r["xp"])
+        day = today()[0]
+        quests, bonus = self._quest_view(r["key"], day)
+        return {"xp": r["xp"], "level": level, "into": r["xp"] - level_floor(level), "need": level_floor(level + 1) - level_floor(level),
+                "quests": quests, "allDone": bonus, "badges": [b for b in BADGES if b in (r["badges"] or "").split(",")],
+                "critters": critters_unlocked(level, r["best_streak"]),
+                "next": [{"id": cid, "kind": kind, "need": need} for cid, (kind, need) in sorted(CRITTER_UNLOCKS.items())]}
+
+    def apply_progress(self, key, stats, earned, score, won, daily):
+        """Credit one finished game: XP, quest progress, badges, unlocks. Returns what changed."""
+        day = today()[0]
+        with self.lock:
+            r = self.db.execute("SELECT * FROM accounts WHERE key = ?", (key,)).fetchone()
+            if not r:
+                return None
+            before_quests, had_bonus = self._quest_view(key, day)
+            for q in before_quests:
+                _, stat, target = QUESTS[q["id"]]
+                add = int(stats.get(stat, 0))
+                if add and not q["done"]:
+                    self.db.execute("INSERT INTO quest_log (key, day, quest, progress) VALUES (?, ?, ?, ?) "
+                                    "ON CONFLICT(key, day, quest) DO UPDATE SET progress = MIN(?, progress + ?)",
+                                    (key, day, q["id"], min(target, add), target, add))
+            after_quests, _ = self._quest_view(key, day)
+            fresh = [q["id"] for q, b in zip(after_quests, before_quests) if q["done"] and not b["done"]]
+            all_now = all(q["done"] for q in after_quests) and not had_bonus
+            if all_now:
+                self.db.execute("INSERT OR IGNORE INTO quest_log (key, day, quest, progress) VALUES (?, ?, '_all', 1)", (key, day))
+            gain = 20 + min(100, max(0, score) // 10) + (25 if won else 0) + (15 if daily else 0) + QUEST_XP * len(fresh) + (ALL_QUESTS_XP if all_now else 0)
+            xp = r["xp"] + gain
+            lvl0, lvl1 = level_for(r["xp"]), level_for(xp)
+            have = set(b for b in (r["badges"] or "").split(",") if b)
+            got = set(b for b in earned if b in BADGES)
+            if r["best_streak"] >= 7:
+                got.add("streak7")
+            if lvl1 >= 5:
+                got.add("level5")
+            if all_now:
+                got.add("questMaster")
+            new_badges = [b for b in BADGES if b in got and b not in have]
+            self.db.execute("UPDATE accounts SET xp = ?, badges = ? WHERE key = ?", (xp, ",".join(b for b in BADGES if b in have | got), key))
+            self.db.commit()
+            before_c = critters_unlocked(lvl0, r["best_streak"])
+            after_c = critters_unlocked(lvl1, r["best_streak"])
+            return {"gain": gain, "xp": xp, "level": lvl1, "levelUp": lvl1 > lvl0, "into": xp - level_floor(lvl1),
+                    "need": level_floor(lvl1 + 1) - level_floor(lvl1), "intoBefore": r["xp"] - level_floor(lvl0) if lvl1 == lvl0 else 0,
+                    "quests": after_quests, "fresh": fresh, "allDone": all_now, "newBadges": new_badges,
+                    "unlocked": [c for c in after_c if c not in before_c]}
 
     def apply_duel(self, key_a, key_b, scores, forfeit_seat):
         """Record a finished duel and update Elo. Returns the rating change for both seats."""

@@ -20,7 +20,10 @@
     mathWhiz: ["calc", "Math whiz: every money problem solved"],
     jackpotJunkie: ["coin", "Jackpot junkie: two jackpots"],
     comeback: ["rise", "Comeback kid"],
-    champion: ["crown", "Champion: won a duel"]
+    champion: ["crown", "Champion: won a duel"],
+    streak7: ["flame", "Week warrior: a 7-day streak"],
+    level5: ["rise", "Rising star: reached level 5"],
+    questMaster: ["sparkle", "Quest master: all 3 quests in a day"]
   };
   const ERR = {
     bad_name: "Names are 3 to 16 letters, numbers or underscores.",
@@ -79,11 +82,19 @@
 
   /* ---------------- Home and accounts ---------------- */
   let authMode = "login";
-  let signupAvatar = Math.floor(Math.random() * DL.art.count);
-
-  function avatarButtons(box, selected, onPick) {
-    box.innerHTML = DL.art.CRITTERS.map((c, i) =>
-      '<button class="av" type="button" data-i="' + i + '" aria-label="' + c.name + '" aria-pressed="' + (selected === i) + '">' + DL.art.avatar(i) + "</button>").join("");
+  let signupAvatar = Math.floor(Math.random() * 4);
+  const FREE = ["c0", "c1", "c2", "c3"];
+  const CRIT_LOCK = { c4: "Unlocks at level 3", c5: "Unlocks at level 5", c6: "Unlocks with a 7-day streak", c7: "Unlocks at level 8" };
+  const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5L10 17L19 7" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function avatarButtons(box, selected, onPick, unlocked) {
+    const open = unlocked || FREE;
+    box.innerHTML = DL.art.CRITTERS.map((c, i) => {
+      const id = DL.art.toId(i);
+      const locked = !open.includes(id) && i !== selected;
+      return '<button class="av' + (locked ? " locked" : "") + '" type="button" data-i="' + i + '" aria-label="' + c.name + (locked ? ", locked: " + CRIT_LOCK[id] : "") +
+        '" title="' + (locked ? CRIT_LOCK[id] : c.name) + '" aria-pressed="' + (selected === i) + '"' + (locked ? " disabled" : "") + ">" + DL.art.avatar(i) +
+        (locked ? '<span class="av-lock" aria-hidden="true">' + DL.art.icon("lock") + "</span>" : "") + "</button>";
+    }).join("");
     box.querySelectorAll(".av").forEach((b) => b.addEventListener("click", () => {
       box.querySelectorAll(".av").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       DL.audio.ensure(); sfx.pop();
@@ -216,7 +227,8 @@
     avatarButtons($("avatars"), av(me), async (i) => {
       await DL.net.setAvatar(DL.art.toId(i));
       $("meAv").innerHTML = DL.art.avatar(i);
-    });
+    }, me.progress && me.progress.critters);
+    renderProgress(me.progress);
   }
 
   /* ---------------- Plan, Pro and mastery ---------------- */
@@ -293,8 +305,26 @@
     if (navigator.share) { navigator.share({ text }).catch(() => {}); return; }
     copyText(text, btn, btn.textContent);
   }
+  function questList(qs, fresh) {
+    return '<ul class="quests">' + qs.map((q) => '<li class="quest' + (q.done ? " done" : "") + (fresh && fresh.includes(q.id) ? " fresh" : "") + '">' +
+      '<span class="q-check">' + (q.done ? CHECK : "") + '</span><span class="q-label">' + esc(q.label) + '</span><span class="q-count">' + q.progress + "/" + q.target + "</span></li>").join("") + "</ul>";
+  }
+  function xpRow(level, into, need, label) {
+    return '<div class="lvl-row"><span class="lvl-num">Level ' + level + '</span><span class="xp-bar" role="meter" aria-label="XP toward the next level" aria-valuemin="0" aria-valuemax="' + need +
+      '" aria-valuenow="' + into + '"><span style="width:' + Math.round((100 * into) / need) + '%"></span></span><span class="xp-txt">' + (label || into + " / " + need + " XP") + "</span></div>";
+  }
+  function renderProgress(p) {
+    const box = $("progBox");
+    box.hidden = !p;
+    if (!p) return;
+    const all = Object.keys(ACH);
+    box.innerHTML = xpRow(p.level, p.into, p.need) +
+      '<h3 class="prog-title">Today\'s quests<span class="prog-hint">' + (p.allDone ? "All done! See you tomorrow" : "+50 XP each, +100 for all three") + "</span></h3>" + questList(p.quests) +
+      '<h3 class="prog-title">Badges<span class="prog-hint">' + p.badges.length + " of " + all.length + " collected</span></h3>" +
+      '<div class="badge-row">' + all.map((k) => { const has = p.badges.includes(k); return '<span class="badge-dot' + (has ? " has" : "") + '" title="' + esc(ACH[k][1]) + (has ? "" : " (not yet)") + '">' + DL.art.icon(ACH[k][0]) + "</span>"; }).join("") + "</div>";
+  }
   function dailyShareText(d, st) {
-    return "Duelette Daily #" + d.num + ": " + d.score + " pts" + (d.rank ? ", #" + d.rank + " today" : "") +
+    return "Duelette Daily #" + d.num + ": " + d.score + " pts" + (d.beat != null ? ", beat " + d.beat + "% of players" : "") + (d.rank ? ", #" + d.rank + " today" : "") +
       (st && st.count > 1 ? ", " + st.count + "-day streak" : "") + ". Can you beat it? " + location.origin + location.pathname;
   }
   function renderDaily(d, st) {
@@ -304,7 +334,7 @@
     const icon = '<span class="daily-ic">' + DL.art.icon("target") + "</span>";
     if (d && d.done) {
       box.innerHTML = icon + '<span class="daily-text"><b>Daily Duel #' + d.num + " done: " + d.score + " pts</b><span>" +
-        (d.rank ? "#" + d.rank + " of " + d.players + " today" : "Save your progress to rank") + ". Next one in " + untilReset(d.resetAt) + ".</span></span>" +
+        (d.beat != null ? "You beat " + d.beat + "% of today's players. " : "") + (d.rank ? "#" + d.rank + " of " + d.players + " ranked. " : "") + "Next one in " + untilReset(d.resetAt) + ".</span></span>" +
         '<button class="btn btn-sm btn-jack" id="dailyShare" type="button">Share</button>';
       $("dailyShare").addEventListener("click", () => shareText(dailyShareText(d, st), $("dailyShare")));
     } else {
@@ -501,6 +531,7 @@
   /* ---------------- Starting a game ---------------- */
   let searchTick = 0;
   function resetGame(mode) {
+    if (S.session) { S.session.leave(); S.session = null; } // leaving a finished duel ends its rematch offer
     S.gen++;
     S.chain = Promise.resolve();
     Object.assign(S, { mode, round: 1, rounds: 5, mult: 1, spinner: 0, jackCount: 0, unlocked: new Set(), wonRound: false, cat: null, mod: null });
@@ -512,7 +543,7 @@
     let me = DL.net.me;
     if (!me) {
       if (!DL.net.online) return;
-      const g = await DL.net.guest(DL.art.toId(Math.floor(Math.random() * DL.art.count)));
+      const g = await DL.net.guest(DL.art.toId(Math.floor(Math.random() * 4)));
       me = DL.net.me;
       if (!me) {
         $("modeNote").hidden = false;
@@ -547,6 +578,7 @@
       code: (d) => enqueue(() => DL.games.code.start(d, ctx())),
       coderes: (d) => enqueue(() => DL.games.code.result(d, ctx())),
       hint: (d) => enqueue(() => DL.games.code.hint(d, ctx())),
+      rematch: (d) => { if (gen === S.gen) onRematch(d); },
       est: (d) => enqueue(() => DL.games.guess.est(d, ctx())),
       estres: (d) => enqueue(() => DL.games.guess.estres(d, ctx())),
       relay: (d) => { if (gen === S.gen && d.round === S.round && S.players[1]) DL.ui.setOpp(opp().name + ": " + d.text); },
@@ -609,6 +641,12 @@
 
   async function onMatch(d) {
     clearInterval(searchTick);
+    if (S.phase === "final") { // a rematch on the same connection
+      Object.assign(S, { round: 1, mult: 1, spinner: 0, jackCount: 0, unlocked: new Set(), wonRound: false, cat: null, mod: null });
+      DL.ui.clearOpp();
+      DL.games.reset();
+      show("scr-arena");
+    }
     S.phase = "starting"; // in a match now: quitting asks for confirmation
     S.me = d.seat;
     S.rounds = d.rounds;
@@ -830,7 +868,7 @@
     if (S.phase === "final") return;
     S.phase = "final";
     clearInterval(searchTick);
-    if (S.session) { S.session.close(); S.session = null; }
+    if (S.session && !f.rematch) { S.session.close(); S.session = null; }
     const solo = S.mode === "solo";
     const me = S.me;
     const o = 1 - me;
@@ -869,7 +907,7 @@
     }
     if (f.daily) {
       extra += '<div class="world"><span class="pill">Daily Duel #' + f.daily.num + "</span><span>" +
-        (f.daily.rank ? "#" + f.daily.rank + " of " + f.daily.players + " today" : "Save your progress to rank today") +
+        (f.daily.beat != null ? "You beat " + f.daily.beat + "% of today's players" + (f.daily.rank ? " · #" + f.daily.rank + " ranked" : "") : f.daily.rank ? "#" + f.daily.rank + " of " + f.daily.players + " today" : "First to play today!") +
         '</span><button class="btn btn-sm btn-jack" type="button" id="shareDaily">Share result</button></div>';
     }
     let buttons = S.daily
@@ -879,6 +917,13 @@
         : S.friendly
           ? [["Challenge again", "btn-go", () => start("friend")], ["Find a match", "btn-p1", () => start("duel")], ["Home", "btn-ghost", () => goHome(true)]]
           : [["Find another match", "btn-go", () => start("duel")], ["Challenge a friend", "btn-p1", () => start("friend")], ["Home", "btn-ghost", () => goHome(true)]];
+    const pr = f.progress ? f.progress[S.me] : null;
+    if (pr) {
+      extra += '<div class="final-prog">' + xpRow(pr.level, pr.levelUp ? 0 : pr.intoBefore, pr.need, "<b>+" + pr.gain + " XP</b>") + questList(pr.quests, pr.fresh) +
+        (pr.newBadges.length ? '<p class="new-line">New badge' + (pr.newBadges.length > 1 ? "s" : "") + ": " + pr.newBadges.map((k) => esc((ACH[k] || [0, k])[1].split(":")[0])).join(", ") + "</p>" : "") +
+        (pr.unlocked.length ? '<p class="new-line">New critter unlocked: ' + pr.unlocked.map((c) => esc(DL.art.name(DL.art.fromId(c)))).join(", ") + "</p>" : "") + "</div>";
+    }
+    if (!solo && f.rematch && S.session) buttons = [["Rematch", "btn-go", askRematch], buttons[0], buttons[2]];
     const plan = f.plans ? f.plans[S.me] : null;
     if (plan && !plan.pro) {
       extra += '<p class="plan-note">' + (plan.left ? plan.left + " free " + (plan.left === 1 ? "game" : "games") + " left today." : "That was your last free game today. More in " + untilReset(plan.resetAt) + ".") + "</p>";
@@ -891,7 +936,8 @@
       '<div class="ach-list">' + (Array.from(S.unlocked).map((k) => '<span class="bonus hot"><span class="mini-ic">' + DL.art.icon(ACH[k][0]) + "</span>" + esc(ACH[k][1]) + "</span>").join("") ||
         '<span class="bonus">No badges this time</span>') + "</div></div>" +
       '<div class="card-actions">' + buttons.map((b, i) => '<button class="btn btn-big ' + b[1] + '" type="button" data-b="' + i + '">' + b[0] + "</button>").join("") + "</div></div>";
-    scr.querySelectorAll("[data-b]").forEach((el) => el.addEventListener("click", () => buttons[Number(el.dataset.b)][2]()));
+    scr.querySelectorAll("[data-b]").forEach((el) => el.addEventListener("click", () => buttons[Number(el.dataset.b)][2](el)));
+    if (pr) celebrateProgress(pr);
     const sd = $("shareDaily");
     if (sd && f.daily) sd.addEventListener("click", () => shareText(dailyShareText(f.daily, stk), sd));
     const fsave = $("finalSave");
@@ -900,6 +946,39 @@
     DL.net.loadMe().then(renderHome);
   }
 
+  function celebrateProgress(pr) {
+    const fill = document.querySelector("#scr-final .final-prog .xp-bar span");
+    if (fill) setTimeout(() => (fill.style.width = Math.round((100 * pr.into) / pr.need) + "%"), 350);
+    let t = 900;
+    const later = (fn) => { setTimeout(fn, t); t += 1300; };
+    if (pr.levelUp) later(() => { sfx.achievement(); DL.fx.toast(DL.art.icon("rise"), "Level " + pr.level + "!", "You leveled up"); });
+    pr.fresh.forEach((id) => { const q = pr.quests.find((x) => x.id === id); later(() => { sfx.coin(); DL.fx.toast(DL.art.icon("sparkle"), "Quest complete +50 XP", q ? q.label : ""); }); });
+    if (pr.allDone) later(() => DL.fx.toast(DL.art.icon("crown"), "All quests done! +100 XP", "New quests tomorrow"));
+    pr.newBadges.slice(0, 3).forEach((k) => later(() => { if (ACH[k]) DL.fx.toast(DL.art.icon(ACH[k][0]), "New badge", ACH[k][1]); }));
+    pr.unlocked.forEach((c) => later(() => DL.fx.toast(DL.art.avatar(DL.art.fromId(c)), "New critter unlocked", DL.art.name(DL.art.fromId(c)) + " is yours to pick")));
+  }
+  async function askRematch(btn) {
+    if (!S.session || !btn) return;
+    btn.disabled = true;
+    btn.classList.remove("pulse");
+    btn.textContent = "Asking...";
+    const r = await S.session.act("rematch");
+    if (r.status === 402) { btn.disabled = false; btn.textContent = "Rematch"; openPaywall(r.data.plan); }
+    else if (r.status !== 200) btn.textContent = "Rematch closed";
+  }
+  function onRematch(d) {
+    const btn = document.querySelector('#scr-final [data-b="0"]');
+    const o = S.players[1 - S.me];
+    if (!btn || S.phase !== "final" || !o) return;
+    btn.classList.remove("pulse");
+    if (d.state === "offer") {
+      btn.disabled = false; btn.textContent = "Accept rematch"; btn.classList.add("pulse");
+      sfx.pop(); DL.fx.toast(DL.art.avatar(av(o)), o.name + " wants a rematch", "Accept to play again right now");
+    } else if (d.state === "waiting") { btn.disabled = true; btn.textContent = "Waiting for " + o.name + "..."; }
+    else if (d.state === "gone") { btn.disabled = true; btn.textContent = o.name + " left"; }
+    else if (d.state === "limit") { btn.disabled = true; btn.textContent = d.seat === S.me ? "Out of free games" : o.name + " is out of games"; }
+    else if (d.state === "closed") { btn.disabled = true; btn.textContent = "Rematch closed"; }
+  }
   function goHome(fromFinal) {
     S.gen++;
     clearInterval(searchTick);
@@ -907,7 +986,7 @@
     wheel.stop();
     DL.audio.hush();
     DL.games.reset();
-    if (S.session) { if (S.phase !== "final") S.session.leave(); else S.session.close(); S.session = null; }
+    if (S.session) { S.session.leave(); S.session = null; }
     S.phase = "home";
     S.mode = null;
     DL.fx.clear();

@@ -10,6 +10,7 @@ Game kinds:
   duel     random matchmaking; after BOT_WAIT seconds alone, a practice bot steps in
   friend   a private room opened by a share link; friendly, so ratings do not move
 """
+import collections
 import json
 import math
 import os
@@ -51,6 +52,7 @@ LAG = 0.8         # network allowance on answer deadlines
 GAP = 2.8         # time to read the explanation after each question
 BOT_WAIT = 12     # seconds alone in the queue before a practice bot steps in
 ROOM_TTL = 1800   # a friend challenge link stays open for 30 minutes
+REMATCH_WAIT = 45  # seconds after a duel when either player can offer a rematch
 BOT_NAMES = ["Byte Bot", "Quiz Bot", "Pixel Bot", "Nova Bot", "Echo Bot"]
 CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -113,6 +115,10 @@ class Game:
         self.friendly = False
         self.bot = next((s for s in seats if s.bot), None)
         self.bot_plan = {}
+        self.stats = [collections.Counter() for _ in seats]  # what each player did, for quests
+        self.earned = [set() for _ in seats]                 # badges earned this game
+        self.rematch = set()
+        self.rematch_until = 0
 
     def send(self, event, data):
         for s in self.seats:
@@ -163,9 +169,12 @@ class Engine:
         with self.lock:
             old = self.active.get(key)
             if old and not old.done:
-                if old.streams > 0 and time.time() - old.seen < 600:
+                if old.game and old.game.phase == "over":
+                    self._abandon(old)
+                elif old.streams > 0 and time.time() - old.seen < 600:
                     return None, "already_playing", None
-                self._abandon(old)
+                else:
+                    self._abandon(old)
             host = None
             if mode == "join":
                 host = self.seats.get(self.rooms.get(str(code or "").upper(), ""))
@@ -231,6 +240,8 @@ class Engine:
                 if seat.id in self.waiting:
                     self._start_bot(seat)
                 return 200, {"ok": True}
+            if kind == "rematch":
+                return self._rematch_request(seat, now)
             g = seat.game
             if not g or g.phase == "over":
                 return 409, {"error": "no_game"}
@@ -294,7 +305,40 @@ class Engine:
         g = seat.game
         if g and g.phase != "over":
             self._forfeit(g, seat.idx)
+        elif g and g.rematch_until:
+            for o in g.others(seat):
+                o.push("rematch", {"state": "gone"})
         seat.close()
+
+    def _rematch_request(self, seat, now):
+        """Either player can offer a rematch for REMATCH_WAIT seconds; it starts when both want it
+        (at once against the bot). Rematches are friendly, so two friends can't farm rating."""
+        g = seat.game
+        if not g or g.phase != "over" or g.solo or not g.rematch_until or now > g.rematch_until:
+            return 409, {"error": "too_late"}
+        o = g.others(seat)[0]
+        if o.done:
+            seat.push("rematch", {"state": "gone"})
+            return 200, {"ok": True}
+        if not self.store.can_play(seat.key):
+            return 402, {"error": "limit", "plan": self.store.quota(seat.key)}
+        g.rematch.add(seat.idx)
+        if o.bot or o.idx in g.rematch:
+            if not o.bot and not self.store.can_play(o.key):
+                g.rematch.discard(o.idx)
+                for s in g.seats:
+                    s.push("rematch", {"state": "limit", "seat": o.idx})
+                return 200, {"ok": True}
+            if g in self.games:
+                self.games.remove(g)
+            seats = list(g.seats)
+            for s in seats:
+                s.game, s.done, s.relays = None, False, []
+            self._start(seats, False, friendly=not any(s.bot for s in seats))
+        else:
+            o.push("rematch", {"state": "offer", "from": seat.idx})
+            seat.push("rematch", {"state": "waiting"})
+        return 200, {"ok": True}
 
     def _pick(self, items, g, n):
         """Choose n questions: the same set for everyone in a Daily Duel, otherwise near each
@@ -328,6 +372,7 @@ class Engine:
         base = {"round": g.round, "index": idx, "spinner": g.spinner, "auto": auto}
         if kind == "jack":
             g.mult = min(8, g.mult * 2)
+            g.stats[g.spinner]["jackpots"] += 1
             g.deadline = now + SPIN_WAIT + SPIN_ANIM
             g.spin_ready = now + SPIN_ANIM
             g.send("spin", dict(base, jackpot=True, mult=g.mult))
@@ -427,6 +472,7 @@ class Engine:
         g.raw[seat.idx] += gain
         if correct:
             ch["right"][seat.idx] += 1
+            g.stats[seat.idx]["right_" + ch["cat"]] += 1
         self._record(seat, item, 1.0 if correct else 0.0)
         for o in g.others(seat):
             o.push("relay", {"round": g.round, "text": QCATS[ch["cat"]].get("relay", "Answered question ") + str(ch["qi"] + 1)})
@@ -473,6 +519,8 @@ class Engine:
         ch["vals"][seat.idx], ch["pts"][seat.idx] = value, pts
         ch["accs"][seat.idx].append(acc)
         g.raw[seat.idx] += pts
+        if acc >= 0.8:
+            g.stats[seat.idx]["est_close"] += 1
         self._record(seat, item, acc)
         for o in g.others(seat):
             o.push("relay", {"round": g.round, "text": "Locked in a guess"})
@@ -556,6 +604,8 @@ class Engine:
             pts = round(pts * max(0.4, 1 - HINT_COST * used))
         ch["subs"][idx] = res
         g.raw[idx] = pts
+        if solved:
+            g.stats[idx]["code_solved"] += 1
         if res.get("error") == "No submission":
             g.tags[idx] = ["No submission"]
         else:
@@ -663,6 +713,12 @@ class Engine:
                 trailing = g.scores[loser] - g.scores[winner] >= 250
                 g.streak[winner] += 1
                 g.streak[loser] = 0
+                g.stats[winner]["rounds_won"] += 1
+                g.earned[winner].add("firstBlood")
+                if g.streak[winner] >= 3:
+                    g.earned[winner].add("hatTrick")
+                if g.streak[winner] >= 5:
+                    g.earned[winner].add("unstoppable")
                 if g.streak[winner] >= 2:
                     extra = 25 * (g.streak[winner] - 1)
                     totals[winner] += extra
@@ -670,6 +726,9 @@ class Engine:
                 if trailing:
                     totals[winner] += 75
                     bonus[winner].append("Comeback +75")
+                    g.earned[winner].add("comeback")
+        for i, ev in enumerate(g.ev):
+            g.earned[i].update(k for k, v in ev.items() if v)
         for i in range(len(g.seats)):
             g.scores[i] = max(0, g.scores[i] + totals[i])
         payload = {"round": g.round, "cat": g.ch.get("cat"), "raw": raw, "totals": totals, "scores": list(g.scores),
@@ -714,12 +773,29 @@ class Engine:
                 out["unranked"] = "bot" if g.bot else "friendly"
             else:
                 out["ratings"] = self.store.apply_duel(g.seats[0].key, g.seats[1].key, s, forfeit_seat)
+        out["progress"] = [None] * len(g.seats)
         for i, seat in enumerate(g.seats):
             if not seat.bot and i != forfeit_seat:  # finishing a game keeps the daily streak alive
                 out["streaks"][i] = self.store.touch_streak(seat.key)
+                st = g.stats[i]
+                st["games"] += 1
+                if g.daily:
+                    st["daily"] += 1
+                if g.scores[i] >= 600:
+                    st["score600"] += 1
+                won = not g.solo and forfeit_seat is None and out["winner"] == i
+                if won:
+                    g.earned[i].add("champion")
+                if st["jackpots"] >= 2:
+                    g.earned[i].add("jackpotJunkie")
+                out["progress"][i] = self.store.apply_progress(seat.key, st, g.earned[i], g.scores[i], won, bool(g.daily))
         out["plans"] = [None if seat.bot else self.store.quota(seat.key) for seat in g.seats]
-        for seat in g.seats:
-            seat.done = True
+        if not g.solo and forfeit_seat is None:
+            g.rematch_until = time.time() + REMATCH_WAIT
+            out["rematch"] = REMATCH_WAIT
+        else:
+            for seat in g.seats:
+                seat.done = True
         return out
 
     def _forfeit(self, g, idx):
@@ -755,6 +831,12 @@ class Engine:
                     host.close()
         for g in list(self.games):
             if g.phase == "over":
+                if g.rematch_until and now > g.rematch_until:
+                    g.rematch_until = 0
+                    for s in g.seats:
+                        if s.game is g and not s.done:
+                            s.push("rematch", {"state": "closed"})
+                            s.close()
                 if now - g.deadline > 300:
                     self.games.remove(g)
                     for s in g.seats:

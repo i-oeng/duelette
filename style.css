@@ -876,3 +876,40 @@ html[data-theme="zimrany"] .opts-two .opt-btn[data-i="1"]:not(:disabled):hover {
 html[data-theme="zimrany"] .overlay { background: rgba(12, 6, 40, .6); }
 html[data-theme="zimrany"] .btn-quit { --c: #0c0c0c; color: #ffffff; }
 html[data-theme="zimrany"] .btn-quit.armed { --c: var(--bad); color: #ffffff; }
+
+/* v11: levels and XP, daily quests, badges, critter locks */
+.prog { display: flex; flex-direction: column; gap: 8px; }
+.lvl-row { display: flex; align-items: center; gap: 10px; }
+.lvl-num { font-family: var(--f-display); font-size: 14px; white-space: nowrap; }
+.xp-bar { flex: 1; min-width: 60px; height: 14px; border: 2px solid var(--edge); border-radius: 999px; background: var(--paper-2); overflow: hidden; }
+.xp-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--trivia), var(--photo)); border-radius: 999px; transition: width 1.1s cubic-bezier(.2, .8, .2, 1); }
+.xp-txt { font-size: 13px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.xp-txt b { color: var(--good-text); font-size: 15px; }
+.prog-title { margin: 6px 0 0; font-family: var(--f-display); font-size: 13px; font-weight: 400; letter-spacing: .03em; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.prog-hint { font-family: var(--f-body); font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--muted); }
+.quests { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.quest { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 14px; font-weight: 600; padding: 6px 10px; border: 2px solid var(--edge); border-radius: 12px; background: var(--paper); text-align: left; }
+.q-check { width: 24px; height: 24px; border: 2px solid var(--edge); border-radius: 50%; display: grid; place-items: center; }
+.q-check svg { width: 15px; height: 15px; display: block; }
+.quest.done { background: var(--paper-2); }
+.quest.done .q-label { color: var(--muted); text-decoration: line-through; }
+.quest.done .q-check { background: var(--good); border-color: var(--good); }
+.quest.fresh { box-shadow: 0 0 0 3px var(--good); animation: bump .5s ease-out; }
+.q-count { font-size: 12px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.badge-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.badge-dot { width: 34px; height: 34px; border: 2px solid var(--edge); border-radius: 10px; background: var(--paper-2); display: grid; place-items: center; filter: grayscale(1); opacity: .35; }
+.badge-dot svg { width: 22px; height: 22px; display: block; }
+.badge-dot.has { filter: none; opacity: 1; background: var(--paper); }
+.final-prog { width: 100%; max-width: 520px; margin: 10px auto 0; display: flex; flex-direction: column; gap: 8px; }
+.new-line { margin: 0; text-align: center; font-weight: 700; color: var(--good-text); }
+.av { position: relative; }
+.av.locked { opacity: .5; cursor: not-allowed; filter: grayscale(.8); }
+.av-lock { position: absolute; right: -5px; bottom: -5px; width: 22px; height: 22px; display: grid; place-items: center; background: var(--paper); border: 2px solid var(--edge); border-radius: 50%; }
+.av-lock svg { width: 14px; height: 14px; display: block; }
+/* signed in: play first, then the profile with level, quests and badges */
+#scr-home:not(.out) #dailyCard { order: 1; }
+#scr-home:not(.out) .modes { order: 2; }
+#scr-home:not(.out) #meCard,
+#scr-home:not(.out) #authCard { order: 3; }
+#scr-home:not(.out) .keys-hint { order: 4; }
+html[data-theme="zimrany"] .keys-hint { color: #f2f2f2; }

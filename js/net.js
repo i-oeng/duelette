@@ -76,13 +76,13 @@ DL.net = (function () {
       const es = new EventSource("api/stream?ticket=" + encodeURIComponent(ticket));
       let closed = false;
       const close = () => { if (!closed) { closed = true; es.close(); } };
-      ["waiting", "match", "spin", "turn", "q", "qres", "code", "coderes", "hint", "est", "estres", "relay", "round", "final", "expired"].forEach((ev) =>
+      ["waiting", "match", "spin", "turn", "q", "qres", "code", "coderes", "hint", "rematch", "est", "estres", "relay", "round", "final", "expired"].forEach((ev) =>
         es.addEventListener(ev, (e) => {
           let data;
           try { data = JSON.parse(e.data); } catch (err) { return; }
           data._at = performance.now();
           if (handlers[ev]) handlers[ev](data);
-          if (ev === "final" || (ev === "round" && data.final)) close();
+          if ((ev === "final" && !data.rematch) || (ev === "round" && data.final && !data.final.rematch)) close();
         }));
       es.addEventListener("closed", close);
       es.onerror = () => { if (!closed && handlers.trouble) handlers.trouble(es.readyState); };

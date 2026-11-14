@@ -40,6 +40,12 @@ Five spins make a game, about five minutes.
 ## Why people come back
 
 - **Daily streaks** for finishing at least one game a day, shown on the profile and the result screen.
+- **Levels and XP**: every finished game earns XP (more for a high score, a duel win, the Daily Duel and quests), with a level bar on the profile and the result screen.
+- **Daily quests**: three small goals a day, the same for everyone ("Solve 3 Money Math problems", "Win 3 duel rounds"). +50 XP each, +100 for all three.
+- **Badge collection**: 17 badges earned from what really happened in a game (judged on the server), kept on the account.
+- **Critter unlocks**: four critters are free; the rest unlock at levels 3, 5 and 8 and with a 7-day streak.
+- **Rematch**: after a duel either player can offer a rematch for 45 seconds; it starts the moment both agree (friendly, so ratings can't be farmed).
+- **Daily percentile**: "You beat 72% of today's players", on the result screen and in the share text.
 - **Mastery meters** per topic (Finance, History, Science, Geography, Tech, Culture, Scam spotting): the chance you'd answer a typical question right, and how far it moved since you started.
 - **Questions that fit you**: every question carries a difficulty rating that moves like a chess rating, and each player gets questions they answer right about 65% of the time.
 - Badges, jackpots, win streaks and a world ranking.
