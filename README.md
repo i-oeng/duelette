@@ -16,9 +16,10 @@ Each round you spin a wheel:
 
 | Wedge | What happens | What you learn |
 |---|---|---|
-| **Trivia Blitz** | 3 quick questions; faster right answers score more | A one-line "why" after every answer |
-| **Ballpark** | Estimate a number ("how far is the Moon", "what does 1,000 tenge of groceries cost after 5 years at 10% inflation") | The real number, how far off you were, and why |
-| **Code Sprint** | Write one JavaScript function against live tests | Your code side by side with a model solution (and your opponent's) |
+| **Trivia Blitz** | 3 quick questions, many on US personal finance (credit scores, 401(k), inflation); faster right answers score more | A one-line "why" after every answer |
+| **Ballpark** | Estimate a number ("how far away is the Moon?") | The real number, how far off you were, and why |
+| **Spot the Scam** | 4 real-looking texts, emails, calls and pop-ups: call each one Scam or Legit | The tell (lookalike domain, gift card request, a code you never asked for) or why it is safe |
+| **Code Sprint** | Write one JavaScript function against live tests; stuck players can take up to 2 hints, each costing 20% of the round | Your code side by side with a model solution (and your opponent's) |
 | **Jackpot** | Doubles the next challenge and spins again | |
 | **Chaos** | A random challenge with a twist (Sudden Death, Bullseye, No Loops...) | |
 
@@ -34,9 +35,11 @@ Five spins make a game, about five minutes.
 ## Why people come back
 
 - **Daily streaks** for finishing at least one game a day, shown on the profile and the result screen.
-- **Mastery meters** per topic (Finance, History, Science, Geography, Tech, Culture): the chance you'd answer a typical question right, and how far it moved since you started.
+- **Mastery meters** per topic (Finance, History, Science, Geography, Tech, Culture, Scam spotting): the chance you'd answer a typical question right, and how far it moved since you started.
 - **Questions that fit you**: every question carries a difficulty rating that moves like a chess rating, and each player gets questions they answer right about 65% of the time.
 - Badges, jackpots, win streaks and a world ranking.
+
+The private bank holds 173 trivia questions, 29 estimates, 26 scam messages and 50 code challenges (255 tests), each with an explanation or hints.
 
 ## Business model
 

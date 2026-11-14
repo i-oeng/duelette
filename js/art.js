@@ -77,6 +77,7 @@ DL.art = (function () {
     code: '<path d="M8 6L2 12L8 18M16 6L22 12L16 18M14 4L10 20" fill="none" stroke="' + INK + '" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>',
     target: '<circle cx="12" cy="12" r="9.5" fill="#ff7a00" ' + I + '/><circle cx="12" cy="12" r="6" fill="#fff" ' + I + '/><circle cx="12" cy="12" r="2.6" fill="#ff2e63" ' + I + '/>',
     lock: '<rect x="4" y="10" width="16" height="12" rx="3" fill="#ffe14d" ' + I + '/><path d="M8 10V7C8 4.5 9.8 3 12 3C14.2 3 16 4.5 16 7V10" fill="none" ' + I + '/><circle cx="12" cy="16" r="1.6" fill="#1b1035"/>',
+    shield: '<path d="M12 2L20 5V11C20 16 16.5 20 12 22C7.5 20 4 16 4 11V5Z" fill="#00c9c8" ' + I + '/><path d="M8.5 12L11 14.5L15.5 9.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
     pencil: '<path d="M16 3L21 8L9 20L3 21L4 15Z" fill="#ffe14d" ' + I + '/><path d="M14 5L19 10M4 15L9 20" fill="none" ' + I + "/>",
     quiz: '<path d="M4 4H20V17H11L6 21V17H4Z" fill="#fff" ' + I + '/><path d="M9.5 8.5C9.5 6 14.5 6 14.5 8.5C14.5 10.5 12 10.5 12 12.5" fill="none" ' + I + '/><circle cx="12" cy="14.8" r="1.1" fill="' + INK + '"/>',
     chaos: '<path d="M12 12C12 10 14 10 14 12C14 15 9 15 9 12C9 8 16 8 16 12C16 17 6 17 6 12C6 6 18 6 18 12C18 19 4 19 3.5 12" fill="none" stroke="#ff2e63" stroke-width="2.4" stroke-linecap="round"/>',

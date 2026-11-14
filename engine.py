@@ -12,6 +12,7 @@ Game kinds:
 """
 import json
 import math
+import os
 import random
 import secrets
 import threading
@@ -21,8 +22,10 @@ import judge
 from accounts import today
 
 ROUNDS = 5
-WHEEL = ["code", "guess", "trivia", "jack", "code", "guess", "trivia", "chaos"]  # same order as js/game.js
-CATS = ["code", "guess", "trivia"]
+WHEEL = ["code", "guess", "trivia", "scam", "jack", "code", "guess", "trivia", "scam", "chaos"]  # same order as js/game.js
+CATS = ["code", "guess", "trivia", "scam"]
+SCAM_OPTS = ["Scam", "Legit"]
+HINT_COST = 0.2  # each code hint takes 20% off that round's points
 TARGET = 0.65     # aim for questions a player gets right about 65% of the time
 SPIN_WAIT = 30    # seconds before an idle spinner's wheel spins itself
 SPIN_ANIM = 6.5   # wheel animation on the client
@@ -110,6 +113,7 @@ class Engine:
         topics = content["topics"]
         self.trivia = [dict(item, topic=topics.get(t, t), tkey=t) for t, items in content["trivia"].items() for item in items]
         self.guess = [dict(item, topic=topics.get(item["t"], item["t"]), tkey=item["t"]) for item in content["guess"]]
+        self.scams = [dict(item, topic=topics.get("safety", "Scam spotting"), tkey="safety") for item in content.get("scam", [])]
         self.code = content["code"]
         self.mods = content["mods"]
         self.lock = threading.RLock()
@@ -217,6 +221,8 @@ class Engine:
                 self._guess(g, seat, data, now)
             elif kind == "submit":
                 self._submit(g, seat, data, now)
+            elif kind == "hint":
+                self._hint(g, seat, now)
             elif kind == "progress":
                 seat.relays = [t for t in seat.relays if now - t < 1]
                 if len(seat.relays) < 4:
@@ -293,6 +299,9 @@ class Engine:
     def _spin(self, g, auto):
         now = time.time()
         idx = g.rng.randrange(len(WHEEL))
+        forced = os.environ.get("DUELETTE_FORCE_CAT", "")  # testing only
+        if forced in WHEEL:
+            idx = WHEEL.index(forced)
         kind = WHEEL[idx]
         base = {"round": g.round, "index": idx, "spinner": g.spinner, "auto": auto}
         if kind == "jack":
@@ -304,6 +313,9 @@ class Engine:
         cat, mod = kind, None
         if kind == "chaos":
             cat = g.rng.choice(CATS)
+        if cat == "scam" and not self.scams:
+            cat = "trivia"
+        if kind == "chaos" and self.mods.get(cat):
             mod = g.rng.choice(self.mods[cat])
         g.phase, g.at = "reveal", now + REVEAL
         g.ch = {"cat": cat, "mod": mod, "token": secrets.token_hex(4)}
@@ -320,6 +332,11 @@ class Engine:
             ch.update(qs=self._pick(self.trivia, g, count), qtime=5 if mod_id == "speed" else 10,
                       penalty=50 if mod_id == "sudden" else 0, right=[0] * n)
             self._send_q(g, 0)
+        elif ch["cat"] == "scam":
+            count = 5 if mod_id == "extra" else 4
+            ch.update(qs=self._pick(self.scams, g, count), qtime=6 if mod_id == "speed" else 12,
+                      penalty=50 if mod_id == "sudden" else 0, right=[0] * n)
+            self._send_q(g, 0)
         elif ch["cat"] == "guess":
             count = 4 if mod_id == "extra" else 3
             ch.update(qs=self._pick(self.guess, g, count), qtime=8 if mod_id == "speed" else 15,
@@ -329,10 +346,11 @@ class Engine:
             item = g.rng.choice(sorted(self.code, key=lambda c: c["fn"]) if g.daily else self.code)
             limit = 45 if mod_id == "half" else 90
             now = time.time()
-            ch.update(item=item, limit=limit, sent=now, deadline=now + limit + 4, subs=[None] * n, codes=[""] * n)
+            ch.update(item=item, limit=limit, sent=now, deadline=now + limit + 4, subs=[None] * n, codes=[""] * n, hints=[0] * n)
             g.send("code", {"round": g.round, "title": item["title"], "prompt": item["prompt"], "fn": item["fn"],
                             "args": item["args"], "tests": item["tests"], "hidden": len(item.get("hidden", [])), "limit": limit,
-                            "rules": {"ban": item.get("ban", []), "noloops": mod_id == "noloops", "oneliner": mod_id == "oneliner"}})
+                            "rules": {"ban": item.get("ban", []), "noloops": mod_id == "noloops", "oneliner": mod_id == "oneliner"},
+                            "hintCount": len(item.get("hints", [])), "hintCost": round(HINT_COST * 100)})
 
     def _tick_questions(self, g, now, close, send, finish):
         ch = g.ch
@@ -354,18 +372,25 @@ class Engine:
     def _send_q(self, g, i):
         ch, now = g.ch, time.time()
         item = ch["qs"][i]
-        opts = [item["a"]] + list(item["w"])
-        g.rng.shuffle(opts)
-        ch.update(qi=i, answer=opts.index(item["a"]), sent=now, deadline=now + ch["qtime"] + LAG,
+        scam = ch["cat"] == "scam"
+        if scam:
+            opts = list(SCAM_OPTS)
+        else:
+            opts = [item["a"]] + list(item["w"])
+            g.rng.shuffle(opts)
+        ch.update(qi=i, opts=opts, answer=opts.index(item["a"]), sent=now, deadline=now + ch["qtime"] + LAG,
                   picks=[None] * len(g.seats), gains=[0] * len(g.seats), stage="q")
-        g.send("q", {"round": g.round, "i": i, "n": len(ch["qs"]), "q": item["q"], "topic": item["topic"],
-                     "opts": opts, "time": ch["qtime"]})
+        msg = {"round": g.round, "i": i, "n": len(ch["qs"]), "q": "Scam or legit?" if scam else item["q"], "topic": item["topic"],
+               "opts": opts, "time": ch["qtime"]}
+        if scam:
+            msg["scam"] = {"channel": item["channel"], "from": item["from"], "body": item["body"], "context": item.get("context", "")}
+        g.send("q", msg)
 
     def _answer(self, g, seat, data, now):
         ch = g.ch
         choice = data.get("choice")
-        if (ch.get("cat") != "trivia" or ch.get("stage") != "q" or data.get("i") != ch["qi"] or ch["picks"][seat.idx] is not None
-                or not isinstance(choice, int) or isinstance(choice, bool) or not 0 <= choice < 4 or now > ch["deadline"]):
+        if (ch.get("cat") not in ("trivia", "scam") or ch.get("stage") != "q" or data.get("i") != ch["qi"] or ch["picks"][seat.idx] is not None
+                or not isinstance(choice, int) or isinstance(choice, bool) or not 0 <= choice < len(ch["opts"]) or now > ch["deadline"]):
             return
         item = ch["qs"][ch["qi"]]
         correct = choice == ch["answer"]
@@ -376,7 +401,7 @@ class Engine:
             ch["right"][seat.idx] += 1
         self._record(seat, item, 1.0 if correct else 0.0)
         for o in g.others(seat):
-            o.push("relay", {"round": g.round, "text": "Answered question " + str(ch["qi"] + 1)})
+            o.push("relay", {"round": g.round, "text": ("Judged message " if ch["cat"] == "scam" else "Answered question ") + str(ch["qi"] + 1)})
         if all(p is not None for p in ch["picks"]):
             self._close_q(g)
 
@@ -392,9 +417,10 @@ class Engine:
 
     def _end_trivia(self, g):
         ch, n = g.ch, len(g.ch["qs"])
+        scam = ch["cat"] == "scam"
         for i in range(len(g.seats)):
-            g.tags[i] = ["%d/%d right" % (ch["right"][i], n)]
-            g.ev[i] = {"bigBrain": ch["right"][i] == n}
+            g.tags[i] = [("%d/%d spotted" if scam else "%d/%d right") % (ch["right"][i], n)]
+            g.ev[i] = {"scamBuster" if scam else "bigBrain": ch["right"][i] == n}
 
     # estimation
 
@@ -474,6 +500,20 @@ class Engine:
                 self._code_done(g, token, idx, res, elapsed)
         threading.Thread(target=work, daemon=True).start()
 
+    def _hint(self, g, seat, now):
+        ch = g.ch
+        if g.phase != "play" or ch.get("cat") != "code" or ch["subs"][seat.idx] is not None or now > ch["deadline"]:
+            return
+        hints = ch["item"].get("hints", [])
+        used = ch["hints"][seat.idx]
+        if used >= len(hints):
+            return
+        ch["hints"][seat.idx] = used + 1
+        seat.push("hint", {"round": g.round, "i": used, "text": hints[used], "used": used + 1, "left": len(hints) - used - 1,
+                           "keep": round(100 * max(0.4, 1 - HINT_COST * (used + 1)))})
+        for o in g.others(seat):
+            o.push("relay", {"round": g.round, "text": "Took a hint"})
+
     def _code_done(self, g, token, idx, res, elapsed):
         ch = g.ch
         if g.phase != "play" or ch.get("token") != token or ch["subs"][idx] not in (None, "pending"):
@@ -481,15 +521,20 @@ class Engine:
         total = max(1, res["total"])
         solved = res["passed"] == total
         pts = round(100 * res["passed"] / total) + (round(100 * max(0.0, 1 - elapsed / ch["limit"])) if solved else 0)
+        used = ch["hints"][idx]
+        if used:
+            pts = round(pts * max(0.4, 1 - HINT_COST * used))
         ch["subs"][idx] = res
         g.raw[idx] = pts
         if res.get("error") == "No submission":
             g.tags[idx] = ["No submission"]
         else:
             g.tags[idx] = ["%d/%d tests" % (res["passed"], total)] + (["Solved in %ds" % round(elapsed)] if solved else [])
-        g.ev[idx] = {"speedDemon": solved and elapsed < 25, "cleanCode": solved}
+        if used:
+            g.tags[idx].append("%d hint%s" % (used, "" if used == 1 else "s"))
+        g.ev[idx] = {"speedDemon": solved and elapsed < 25 and not used, "cleanCode": solved and not used}
         g.send("coderes", {"round": g.round, "seat": idx, "passed": res["passed"], "total": total, "solved": solved,
-                           "time": round(elapsed), "pts": pts, "error": res.get("error", "")})
+                           "time": round(elapsed), "pts": pts, "error": res.get("error", ""), "hints": used})
         if all(isinstance(s, dict) for s in ch["subs"]):
             self._finish_round(g)
 
@@ -532,12 +577,12 @@ class Engine:
         elif g.phase == "play":
             ch = g.ch
             cat = ch["cat"]
-            if cat == "trivia" and ch.get("stage") == "q" and ch["picks"][b.idx] is None:
+            if cat in ("trivia", "scam") and ch.get("stage") == "q" and ch["picks"][b.idx] is None:
                 key = ("q", g.round, ch["qi"])
                 if plan.get("k") != key:
-                    lo, hi = (1.5, 4.0) if ch["qtime"] <= 5 else (2.5, 7.5)
-                    right = random.random() < 0.62
-                    choice = ch["answer"] if right else random.choice([i for i in range(4) if i != ch["answer"]])
+                    lo, hi = (1.5, 4.0) if ch["qtime"] <= 6 else (2.5, 7.5)
+                    right = random.random() < (0.7 if cat == "scam" else 0.62)
+                    choice = ch["answer"] if right else random.choice([i for i in range(len(ch["opts"])) if i != ch["answer"]])
                     plan.clear()
                     plan.update(k=key, at=ch["sent"] + random.uniform(lo, hi), choice=choice)
                 elif now >= plan["at"]:
@@ -699,7 +744,7 @@ class Engine:
                 self._begin(g)
             elif g.phase == "play":
                 cat = g.ch["cat"]
-                if cat == "trivia":
+                if cat in ("trivia", "scam"):
                     self._tick_questions(g, now, self._close_q, self._send_q, self._end_trivia)
                 elif cat == "guess":
                     self._tick_questions(g, now, self._close_est, self._send_est, self._end_guess)

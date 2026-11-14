@@ -71,6 +71,7 @@ with open(CONTENT_FILE, encoding="utf-8") as fh:
     CONTENT = json.load(fh)
 ITEM_TOPICS = {item["id"]: t for t, items in CONTENT["trivia"].items() for item in items}
 ITEM_TOPICS.update({item["id"]: item["t"] for item in CONTENT["guess"]})
+ITEM_TOPICS.update({item["id"]: "safety" for item in CONTENT.get("scam", [])})
 store = Store(os.path.join(DATA_DIR, "duelette2.db"), ITEM_TOPICS, CONTENT["topics"])
 engine = Engine(store, CONTENT)
 

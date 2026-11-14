@@ -6,7 +6,8 @@
   "science": "Science",
   "geography": "Geography",
   "tech": "Tech",
-  "culture": "Culture"
+  "culture": "Culture",
+  "safety": "Scam spotting"
  },
  "trivia": {
   "finance": [
@@ -274,7 +275,11 @@
      "!etteleuD"
     ]
    ],
-   "model": "function reverse(s) {\n  return [...s].reverse().join(\"\");\n}"
+   "model": "function reverse(s) {\n  return [...s].reverse().join(\"\");\n}",
+   "hints": [
+    "[...s] or s.split(\"\") turns the string into an array of characters.",
+    "Arrays have .reverse(); join(\"\") turns the result back into a string."
+   ]
   },
   {
    "fn": "sumAll",
@@ -329,7 +334,11 @@
      100
     ]
    ],
-   "model": "function sumAll(nums) {\n  return nums.reduce((total, n) => total + n, 0);\n}"
+   "model": "function sumAll(nums) {\n  return nums.reduce((total, n) => total + n, 0);\n}",
+   "hints": [
+    "Start a total at 0 and add each number.",
+    "reduce((total, n) => total + n, 0) does it in one line."
+   ]
   },
   {
    "fn": "countVowels",
@@ -370,7 +379,11 @@
      0
     ]
    ],
-   "model": "function countVowels(s) {\n  return (s.match(/[aeiou]/gi) || []).length;\n}"
+   "model": "function countVowels(s) {\n  return (s.match(/[aeiou]/gi) || []).length;\n}",
+   "hints": [
+    "Lowercase the string so 'A' and 'a' count the same.",
+    "Count the characters found in \"aeiou\", or use a regex with match()."
+   ]
   },
   {
    "fn": "isPalindrome",
@@ -411,7 +424,129 @@
      false
     ]
    ],
-   "model": "function isPalindrome(s) {\n  const t = s.toLowerCase().replace(/ /g, \"\");\n  return t === [...t].reverse().join(\"\");\n}"
+   "model": "function isPalindrome(s) {\n  const t = s.toLowerCase().replace(/ /g, \"\");\n  return t === [...t].reverse().join(\"\");\n}",
+   "hints": [
+    "Lowercase the text and remove the spaces first.",
+    "Compare the cleaned text with its reverse."
+   ]
+  },
+  {
+   "fn": "tipCents",
+   "args": "billCents, percent",
+   "title": "Tip calculator",
+   "prompt": "A bill is given in cents. Return the tip in cents, rounded to the nearest cent.",
+   "tests": [
+    [
+     [
+      5000,
+      20
+     ],
+     1000
+    ],
+    [
+     [
+      2350,
+      15
+     ],
+     353
+    ],
+    [
+     [
+      999,
+      18
+     ],
+     180
+    ]
+   ],
+   "hidden": [
+    [
+     [
+      0,
+      20
+     ],
+     0
+    ],
+    [
+     [
+      1234,
+      10
+     ],
+     123
+    ]
+   ],
+   "model": "function tipCents(billCents, percent) {\n  return Math.round(billCents * percent / 100);\n}",
+   "hints": [
+    "Multiply the bill by the percent and divide by 100.",
+    "Math.round() rounds to the nearest whole cent."
+   ]
+  },
+  {
+   "fn": "splitBill",
+   "args": "totalCents, people",
+   "title": "Split the bill",
+   "prompt": "Split a bill in cents fairly: everyone pays the same, and leftover cents go to the first people. Return the shares.",
+   "tests": [
+    [
+     [
+      1000,
+      3
+     ],
+     [
+      334,
+      333,
+      333
+     ]
+    ],
+    [
+     [
+      900,
+      3
+     ],
+     [
+      300,
+      300,
+      300
+     ]
+    ],
+    [
+     [
+      5,
+      2
+     ],
+     [
+      3,
+      2
+     ]
+    ]
+   ],
+   "hidden": [
+    [
+     [
+      1001,
+      4
+     ],
+     [
+      251,
+      250,
+      250,
+      250
+     ]
+    ],
+    [
+     [
+      7,
+      1
+     ],
+     [
+      7
+     ]
+    ]
+   ],
+   "model": "function splitBill(totalCents, people) {\n  const base = Math.floor(totalCents / people);\n  const extra = totalCents % people;\n  return Array.from({ length: people }, (_, i) => base + (i < extra ? 1 : 0));\n}",
+   "hints": [
+    "Math.floor(total / people) is everyone's base share.",
+    "total % people is how many people pay one extra cent."
+   ]
   }
  ],
  "mods": {
@@ -465,6 +600,59 @@
     "label": "Overtime",
     "desc": "4 questions instead of 3."
    }
+  ],
+  "scam": [
+   {
+    "id": "speed",
+    "label": "Speed round",
+    "desc": "6 seconds per message. Trust your gut."
+   },
+   {
+    "id": "sudden",
+    "label": "Sudden death",
+    "desc": "Wrong calls cost 50 points."
+   },
+   {
+    "id": "extra",
+    "label": "Overtime",
+    "desc": "5 messages instead of 4."
+   }
   ]
- }
+ },
+ "scam": [
+  {
+   "id": "s-01",
+   "channel": "Text",
+   "from": "+1 (318) 555-0142",
+   "body": "USPS: Your package is on hold because of an incomplete address. Update it within 12 hours: usps-redelivery-help.com",
+   "a": "Scam",
+   "why": "USPS only texts tracking updates you asked for, and its only site is usps.com. A deadline plus a lookalike link is the classic package scam."
+  },
+  {
+   "id": "s-06",
+   "channel": "Email",
+   "from": "Netflix <billing@netflx-account.com>",
+   "body": "Your payment failed and your membership will be cancelled today. Update your card now: netflx-account.com/update",
+   "a": "Scam",
+   "why": "Read the domain: netflx is missing an i. Open the app yourself to check billing instead of using the link."
+  },
+  {
+   "id": "s-15",
+   "channel": "Text",
+   "from": "54321",
+   "body": "Your verification code is 482913. Don't share this code with anyone. We'll never call to ask for it.",
+   "a": "Legit",
+   "why": "You asked for it seconds ago, it has no link, and it warns you not to share it. Type it in and you're done.",
+   "context": "You just tapped \"Send code\" while logging in to your bank app."
+  },
+  {
+   "id": "s-19",
+   "channel": "Call",
+   "from": "Your bank",
+   "body": "Thanks for calling. To verify your identity, can you confirm the last 4 digits of your card and your ZIP code?",
+   "a": "Legit",
+   "why": "You started the call on a number you trust, and they ask for limited details, not your PIN, full card number or one-time code.",
+   "context": "You called the number printed on the back of your debit card."
+  }
+ ]
 }

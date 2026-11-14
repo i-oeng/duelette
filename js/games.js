@@ -26,13 +26,16 @@ DL.games = (function () {
   const trivia = {
     q(d, ctx) {
       DL.fx.clear();
-      cur = { cat: "trivia", round: d.round, i: d.i, pick: null, opts: d.opts };
+      cur = { cat: "trivia", round: d.round, i: d.i, pick: null, opts: d.opts, scam: !!d.scam };
+      const m = d.scam;
+      const msg = m ? '<div class="scam-msg"><div class="scam-top"><span class="scam-ch">' + esc(m.channel) + '</span><span class="scam-from">' + esc(m.from) + "</span></div>" +
+        '<p class="scam-body">' + esc(m.body) + "</p></div>" + (m.context ? '<p class="scam-ctx">' + esc(m.context) + "</p>" : "") : "";
       const p = mount(
-        '<div class="card">' + catHead("trivia", '<span class="pill">Question ' + (d.i + 1) + " of " + d.n + "</span>") +
+        '<div class="card">' + catHead(m ? "scam" : "trivia", '<span class="pill">' + (m ? "Message " : "Question ") + (d.i + 1) + " of " + d.n + "</span>") +
         '<div class="card-body"><div class="badges"><span class="pill topic">' + esc(d.topic) + "</span>" + modBadge(ctx.mod) + "</div>" +
-        '<h2 class="tq">' + esc(d.q) + '</h2><div id="tmr"></div><div class="opts">' +
+        '<h2 class="tq">' + esc(d.q) + "</h2>" + msg + '<div id="tmr"></div><div class="opts' + (m ? " opts-scam" : "") + '">' +
         d.opts.map((o, i) => '<button class="opt-btn" type="button" data-i="' + i + '"><span class="k">' + (i + 1) + '</span><span class="opt-text">' + esc(o) + "</span></button>").join("") +
-        '</div><p class="g-status" id="gStatus" aria-live="polite">Pick an answer. Faster right answers score more.</p><p class="g-why" id="gWhy" hidden></p>' + oppSlot() + "</div></div>"
+        '</div><p class="g-status" id="gStatus" aria-live="polite">' + (m ? "Scam or legit? Faster right calls score more." : "Pick an answer. Faster right answers score more.") + '</p><p class="g-why" id="gWhy" hidden></p>' + oppSlot() + "</div></div>"
       );
       const btns = Array.from(p.querySelectorAll(".opt-btn"));
       cur.btns = btns;
@@ -53,7 +56,7 @@ DL.games = (function () {
         status(ctx.solo ? "Locked in. Checking..." : "Locked in. Waiting for " + oppName(ctx) + "...");
         ctx.act("answer", { i: d.i, choice: i });
       };
-      cur.onKey = (e) => { if (!e.repeat && e.key >= "1" && e.key <= "4") pick(Number(e.key) - 1); };
+      cur.onKey = (e) => { if (!e.repeat && /^[1-9]$/.test(e.key) && Number(e.key) <= d.opts.length) pick(Number(e.key) - 1); };
       addEventListener("keydown", cur.onKey);
       btns.forEach((b, i) => b.addEventListener("click", () => pick(i)));
     },
@@ -89,7 +92,7 @@ DL.games = (function () {
       } else {
         sfx.wrong();
         DL.fx.shake(cur.btns[d.answer].closest(".card"));
-        status((mine === null ? "No answer. " : "Wrong. ") + "The answer was " + cur.opts[d.answer] + "." + (gain < 0 ? " " + gain + " pts" : ""), "bad");
+        status((mine === null ? "No answer. " : "Wrong. ") + (cur.scam ? (cur.opts[d.answer] === "Scam" ? "It was a scam." : "It was legit.") : "The answer was " + cur.opts[d.answer] + ".") + (gain < 0 ? " " + gain + " pts" : ""), "bad");
       }
     }
   };
@@ -145,8 +148,10 @@ DL.games = (function () {
           '<div class="test" data-i="' + i + '"><span class="test-dot"></span><span class="test-call">' + esc(d.fn + "(" + t[0].map(fmt).join(", ") + ")") +
           '</span><span class="test-got">expect ' + esc(fmt(t[1])) + "</span></div>").join("") +
         '<div class="code-msg" id="cmsg" hidden></div></div></div>' +
+        '<div class="hint-box" id="hintBox" hidden></div>' +
         '<p class="g-status" id="gStatus" aria-live="polite">Make the tests pass, then submit. The server re-runs your code with hidden tests.</p>' + oppSlot() + "</div>" +
-        '<div class="card-actions"><button class="btn btn-ghost" id="runBtn" type="button">Run tests</button>' +
+        '<div class="card-actions">' + (d.hintCount ? '<button class="btn btn-ghost" id="hintBtn" type="button">Hint (-' + (d.hintCost || 20) + "%)</button>" : "") +
+        '<button class="btn btn-ghost" id="runBtn" type="button">Run tests</button>' +
         '<button class="btn btn-go" id="doneBtn" type="button">Submit</button></div></div>'
       );
       const ed = p.querySelector("#editor");
@@ -202,11 +207,35 @@ DL.games = (function () {
       });
       ed.addEventListener("input", () => { clearTimeout(debounce); debounce = setTimeout(run, 900); });
       p.querySelector("#runBtn").addEventListener("click", run);
+      const hintBtn = p.querySelector("#hintBtn");
+      cur.hintCost = d.hintCost || 20;
+      if (hintBtn) hintBtn.addEventListener("click", () => {
+        if (cur.sent || cur.round !== d.round) return;
+        hintBtn.disabled = true;
+        sfx.click();
+        ctx.act("hint");
+      });
       p.querySelector("#doneBtn").addEventListener("click", () => submit(false));
+    },
+    hint(d) {
+      if (cur.cat !== "code" || cur.round !== d.round) return;
+      const box = document.getElementById("hintBox");
+      const btn = document.getElementById("hintBtn");
+      if (!box) return;
+      box.hidden = false;
+      box.insertAdjacentHTML("beforeend", '<p class="hint-line"><span class="hint-k">Hint ' + (d.i + 1) + "</span>" + esc(d.text) + "</p>");
+      let note = box.querySelector(".hint-note");
+      if (!note) { box.insertAdjacentHTML("beforeend", '<p class="hint-note"></p>'); note = box.querySelector(".hint-note"); }
+      box.appendChild(note);
+      note.textContent = "This round now pays " + d.keep + "% of its points.";
+      if (btn) {
+        btn.disabled = cur.sent || d.left <= 0;
+        btn.textContent = d.left > 0 ? "Another hint (-" + cur.hintCost + "%)" : "No hints left";
+      }
     },
     result(d, ctx) {
       if (d.seat !== ctx.me) { setOpp(oppName(ctx) + ": " + d.passed + "/" + d.total + " tests" + (d.solved ? ", solved in " + d.time + " sec" : "")); return; }
-      const line = d.passed + "/" + d.total + " tests passed" + (d.solved ? " in " + d.time + " sec" : "") + ". +" + d.pts + " pts";
+      const line = d.passed + "/" + d.total + " tests passed" + (d.solved ? " in " + d.time + " sec" : "") + (d.hints ? " with " + d.hints + " hint" + (d.hints === 1 ? "" : "s") : "") + ". +" + d.pts + " pts";
       status((d.error && d.error !== "No submission" ? d.error + " " : "") + line, d.solved ? "good" : "bad");
       if (d.solved) sfx.correct(); else sfx.wrong();
     }

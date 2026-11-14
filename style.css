@@ -785,3 +785,20 @@ kbd {
   .share-box { flex-direction: column; }
 }
 .plan-name small { font-family: var(--f-body); font-size: 12px; font-weight: 700; color: var(--muted); }
+
+/* v9: Spot the Scam and code hints */
+.scam-msg { margin: 6px 0 10px; border: 3px solid var(--ink); border-radius: 18px; background: #fff; box-shadow: 4px 4px 0 var(--ink); overflow: hidden; }
+.scam-top { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: #e6fbfa; border-bottom: 2px solid var(--ink); font-size: 14px; min-width: 0; }
+.scam-ch { flex: none; font-family: var(--f-display); font-size: 12px; letter-spacing: .05em; text-transform: uppercase; background: #00c9c8; color: var(--ink); border: 2px solid var(--ink); border-radius: 999px; padding: 1px 9px; }
+.scam-from { font-weight: 700; overflow-wrap: anywhere; min-width: 0; }
+.scam-body { margin: 0; padding: 12px 14px 14px; font-size: 17px; line-height: 1.45; overflow-wrap: anywhere; }
+.scam-ctx { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+.scam-ctx::before { content: "Context: "; font-weight: 700; color: var(--ink); }
+.opts-scam .opt-btn { justify-content: center; font-size: 18px; }
+.opts-scam .opt-btn[data-i="0"]:not(:disabled):hover { background: #ffe0e8; }
+.opts-scam .opt-btn[data-i="1"]:not(:disabled):hover { background: #e8fbd0; }
+@media (max-width: 640px) { .opts.opts-scam { grid-template-columns: 1fr 1fr; } }
+.hint-box { margin: 10px 0 0; padding: 10px 14px; border: 2px dashed var(--ink); border-radius: 14px; background: #fff8d6; }
+.hint-line { margin: 4px 0; font-size: 15px; }
+.hint-k { font-family: var(--f-display); font-size: 12px; letter-spacing: .05em; margin-right: 8px; background: var(--ink); color: #ffe14d; border-radius: 999px; padding: 1px 8px; }
+.hint-note { margin: 6px 0 2px; font-size: 13px; color: var(--muted); }

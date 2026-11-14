@@ -3,7 +3,7 @@
   const { esc, mount, catHead, wait } = DL.ui;
   const sfx = DL.audio.sfx;
   const $ = (id) => document.getElementById(id);
-  const WHEEL = ["code", "guess", "trivia", "jack", "code", "guess", "trivia", "chaos"]; // matches engine.py
+  const WHEEL = ["code", "guess", "trivia", "scam", "jack", "code", "guess", "trivia", "scam", "chaos"]; // matches engine.py
   const PCOL = ["#ff2e63", "#1f6bff"]; // you are always pink, the opponent blue
 
   const ACH = {
@@ -14,6 +14,7 @@
     speedDemon: ["clock", "Speed demon: solved under 25 sec"],
     cleanCode: ["sparkle", "Clean code: passed every hidden test"],
     sharpshooter: ["target", "Sharpshooter: a near-perfect guess"],
+    scamBuster: ["shield", "Scam buster: called every message right"],
     jackpotJunkie: ["coin", "Jackpot junkie: two jackpots"],
     comeback: ["rise", "Comeback kid"],
     champion: ["crown", "Champion: won a duel"]
@@ -234,7 +235,7 @@
     const box = $("mastery");
     const all = list || [];
     if (!all.some((m) => m.answers > 0)) {
-      box.innerHTML = '<p class="mastery-empty">Answer trivia and Ballpark questions to build your mastery in each topic.</p>';
+      box.innerHTML = '<p class="mastery-empty">Answer trivia, Ballpark and Spot the Scam rounds to build your mastery in each topic.</p>';
       return;
     }
     box.innerHTML = '<h3 class="mastery-title">Your mastery<span class="mastery-hint">Chance you get a typical question in the topic right</span></h3>' +
@@ -530,6 +531,7 @@
       qres: (d) => enqueue(() => DL.games.trivia.qres(d, ctx())),
       code: (d) => enqueue(() => DL.games.code.start(d, ctx())),
       coderes: (d) => enqueue(() => DL.games.code.result(d, ctx())),
+      hint: (d) => enqueue(() => DL.games.code.hint(d, ctx())),
       est: (d) => enqueue(() => DL.games.guess.est(d, ctx())),
       estres: (d) => enqueue(() => DL.games.guess.estres(d, ctx())),
       relay: (d) => { if (gen === S.gen && d.round === S.round && S.players[1]) DL.ui.setOpp(opp().name + ": " + d.text); },
@@ -701,7 +703,8 @@
   function blurb(cat, mod) {
     const is = (id) => mod && mod.id === id;
     if (cat === "trivia") return (is("extra") ? 4 : 3) + " questions, " + (is("speed") ? 5 : 10) + " seconds each. Faster right answers score more." + (is("sudden") ? " Wrong answers cost 50 pts." : "");
-    if (cat === "code") return "Write one JavaScript function. The server checks it with hidden tests, and a faster solve earns a bigger bonus.";
+    if (cat === "code") return "Write one JavaScript function. The server checks it with hidden tests, and a faster solve earns a bigger bonus. Stuck? Each hint costs 20% of the round.";
+    if (cat === "scam") return (is("extra") ? 5 : 4) + " real-looking texts, emails and calls, " + (is("speed") ? 6 : 12) + " seconds each. Call each one Scam or Legit." + (is("sudden") ? " Wrong calls cost 50 pts." : "");
     return (is("extra") ? 4 : 3) + " numbers to estimate, " + (is("speed") ? 8 : 15) + " seconds each. The closer your guess, the more you score." + (is("bullseye") ? " Only close guesses count, but they pay 1.5 times as much." : "");
   }
 

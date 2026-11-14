@@ -5,5 +5,6 @@ window.DL = window.DL || {};
 DL.CATS = {
   code:   { id: "code",   label: "Code",   name: "Code Sprint",  color: "#b6f03c", text: "#1b1035", icon: "code" },
   guess:  { id: "guess",  label: "Guess",  name: "Ballpark",     color: "#ff7a00", text: "#1b1035", icon: "target" },
-  trivia: { id: "trivia", label: "Trivia", name: "Trivia Blitz", color: "#8c52ff", text: "#ffffff", icon: "quiz" }
+  trivia: { id: "trivia", label: "Trivia", name: "Trivia Blitz", color: "#8c52ff", text: "#ffffff", icon: "quiz" },
+  scam:   { id: "scam",   label: "Scam?",  name: "Spot the Scam", color: "#00c9c8", text: "#1b1035", icon: "shield" }
 };
