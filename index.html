@@ -21,6 +21,8 @@
   if (/^https?:$/.test(location.protocol) && !/(\/|\.html)$/.test(location.pathname)) {
     location.replace(location.pathname + "/" + location.search + location.hash);
   }
+  // Apply the saved theme before anything paints.
+  try { if (localStorage.getItem("dl-theme") === "zimrany") document.documentElement.dataset.theme = "zimrany"; } catch (e) {}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -37,6 +39,7 @@
       <button id="quitBtn" class="btn btn-sm btn-quit" type="button" hidden>Quit run</button>
       <button id="rankBtn" class="btn btn-sm" type="button">World ranking</button>
       <button id="muteBtn" class="btn btn-sm" type="button" aria-pressed="true">Sound: On</button>
+      <button id="themeBtn" class="btn btn-sm" type="button" aria-label="Switch color theme"><span class="th-swatch" aria-hidden="true"></span><span class="th-pre">Theme: </span><span id="themeName">Classic</span></button>
     </div>
   </header>
 

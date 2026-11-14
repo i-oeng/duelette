@@ -39,6 +39,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import billing
 from accounts import Store
+import mathgen
 from engine import Engine
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -72,6 +73,8 @@ with open(CONTENT_FILE, encoding="utf-8") as fh:
 ITEM_TOPICS = {item["id"]: t for t, items in CONTENT["trivia"].items() for item in items}
 ITEM_TOPICS.update({item["id"]: item["t"] for item in CONTENT["guess"]})
 ITEM_TOPICS.update({item["id"]: "safety" for item in CONTENT.get("scam", [])})
+ITEM_TOPICS.update({item["id"]: item["t"] for key in ("myth", "first") for item in CONTENT.get(key, [])})
+ITEM_TOPICS.update({mid: "finance" for mid in mathgen.TEMPLATE_IDS})
 store = Store(os.path.join(DATA_DIR, "duelette2.db"), ITEM_TOPICS, CONTENT["topics"])
 engine = Engine(store, CONTENT)
 

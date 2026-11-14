@@ -3,7 +3,7 @@
   const { esc, mount, catHead, wait } = DL.ui;
   const sfx = DL.audio.sfx;
   const $ = (id) => document.getElementById(id);
-  const WHEEL = ["code", "guess", "trivia", "scam", "jack", "code", "guess", "trivia", "scam", "chaos"]; // matches engine.py
+  const WHEEL = ["trivia", "guess", "scam", "math", "jack", "code", "myth", "first", "trivia", "chaos"]; // matches engine.py
   const PCOL = ["#ff2e63", "#1f6bff"]; // you are always pink, the opponent blue
 
   const ACH = {
@@ -15,6 +15,9 @@
     cleanCode: ["sparkle", "Clean code: passed every hidden test"],
     sharpshooter: ["target", "Sharpshooter: a near-perfect guess"],
     scamBuster: ["shield", "Scam buster: called every message right"],
+    mythBuster: ["toggle", "Myth buster: every statement right"],
+    timeLord: ["hourglass", "Time lord: every pair in order"],
+    mathWhiz: ["calc", "Math whiz: every money problem solved"],
     jackpotJunkie: ["coin", "Jackpot junkie: two jackpots"],
     comeback: ["rise", "Comeback kid"],
     champion: ["crown", "Champion: won a duel"]
@@ -235,7 +238,7 @@
     const box = $("mastery");
     const all = list || [];
     if (!all.some((m) => m.answers > 0)) {
-      box.innerHTML = '<p class="mastery-empty">Answer trivia, Ballpark and Spot the Scam rounds to build your mastery in each topic.</p>';
+      box.innerHTML = '<p class="mastery-empty">Play question rounds to build your mastery in each topic.</p>';
       return;
     }
     box.innerHTML = '<h3 class="mastery-title">Your mastery<span class="mastery-hint">Chance you get a typical question in the topic right</span></h3>' +
@@ -702,10 +705,14 @@
 
   function blurb(cat, mod) {
     const is = (id) => mod && mod.id === id;
-    if (cat === "trivia") return (is("extra") ? 4 : 3) + " questions, " + (is("speed") ? 5 : 10) + " seconds each. Faster right answers score more." + (is("sudden") ? " Wrong answers cost 50 pts." : "");
+    const sudden = is("sudden") ? " Wrong answers cost 30 pts." : "";
+    if (cat === "trivia") return (is("extra") ? 6 : 5) + " questions, " + (is("speed") ? 5 : 10) + " seconds each. Faster right answers score more." + sudden;
+    if (cat === "math") return (is("extra") ? 5 : 4) + " everyday money problems, " + (is("speed") ? 8 : 15) + " seconds each: tips, discounts, interest, paychecks." + sudden;
+    if (cat === "myth") return (is("extra") ? 6 : 5) + " statements people believe, " + (is("speed") ? 5 : 10) + " seconds each. Call each one Myth or Fact." + sudden;
+    if (cat === "first") return (is("extra") ? 6 : 5) + " pairs of events, " + (is("speed") ? 5 : 8) + " seconds each. Pick the one that happened first." + sudden;
     if (cat === "code") return "Write one JavaScript function. The server checks it with hidden tests, and a faster solve earns a bigger bonus. Stuck? Each hint costs 20% of the round.";
-    if (cat === "scam") return (is("extra") ? 5 : 4) + " real-looking texts, emails and calls, " + (is("speed") ? 6 : 12) + " seconds each. Call each one Scam or Legit." + (is("sudden") ? " Wrong calls cost 50 pts." : "");
-    return (is("extra") ? 4 : 3) + " numbers to estimate, " + (is("speed") ? 8 : 15) + " seconds each. The closer your guess, the more you score." + (is("bullseye") ? " Only close guesses count, but they pay 1.5 times as much." : "");
+    if (cat === "scam") return (is("extra") ? 6 : 5) + " real-looking texts, emails and calls, " + (is("speed") ? 6 : 12) + " seconds each. Call each one Scam or Legit." + sudden;
+    return (is("extra") ? 5 : 4) + " numbers to estimate, " + (is("speed") ? 8 : 15) + " seconds each. The closer your guess, the more you score." + (is("bullseye") ? " Only close guesses count, but they pay 1.5 times as much." : "");
   }
 
   async function reveal(d) {
@@ -1009,6 +1016,17 @@
   const muteBtn = $("muteBtn");
   const paintMute = () => { muteBtn.textContent = DL.audio.muted ? "Sound: Off" : "Sound: On"; muteBtn.setAttribute("aria-pressed", String(!DL.audio.muted)); };
   muteBtn.addEventListener("click", () => { DL.audio.toggle(); paintMute(); sfx.click(); });
+  // Color themes: Classic (sunburst yellow) or Zimrany (zimran.io violet). Saved on this device only.
+  const root = document.documentElement;
+  const paintTheme = () => { $("themeName").textContent = root.dataset.theme === "zimrany" ? "Zimrany" : "Classic"; };
+  $("themeBtn").addEventListener("click", () => {
+    const next = root.dataset.theme === "zimrany" ? "classic" : "zimrany";
+    if (next === "zimrany") root.dataset.theme = "zimrany"; else delete root.dataset.theme;
+    try { localStorage.setItem("dl-theme", next); } catch (e) {}
+    paintTheme();
+    sfx.click();
+  });
+  paintTheme();
   paintMute();
   $("soloBtn").addEventListener("click", () => start("solo"));
   $("matchBtn").addEventListener("click", () => start("duel"));

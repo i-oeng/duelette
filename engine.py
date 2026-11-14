@@ -19,12 +19,27 @@ import threading
 import time
 
 import judge
+import mathgen
 from accounts import today
 
 ROUNDS = 5
-WHEEL = ["code", "guess", "trivia", "scam", "jack", "code", "guess", "trivia", "scam", "chaos"]  # same order as js/game.js
-CATS = ["code", "guess", "trivia", "scam"]
-SCAM_OPTS = ["Scam", "Legit"]
+WHEEL = ["trivia", "guess", "scam", "math", "jack", "code", "myth", "first", "trivia", "chaos"]  # same order as js/game.js
+CATS = ["code", "guess", "trivia", "scam", "math", "myth", "first"]
+ROUND_MAX = 300  # the most one round pays before jackpots and bonuses, whatever its question count
+PENALTY = 30     # Sudden Death: points lost per wrong answer
+GUESS_N = 4      # Ballpark estimates per round
+# Question rounds. n: questions per round, time / fast: seconds each (normal / Speed round),
+# fixed: the same two buttons every time, ask: the prompt when the item has none of its own.
+QCATS = {
+    "trivia": {"n": 5, "time": 10, "fast": 5, "tag": "%d/%d right", "ev": "bigBrain", "bot": 0.62},
+    "scam": {"n": 5, "time": 12, "fast": 6, "tag": "%d/%d spotted", "ev": "scamBuster", "bot": 0.7,
+             "fixed": ["Scam", "Legit"], "ask": "Scam or legit?", "relay": "Judged message "},
+    "myth": {"n": 5, "time": 10, "fast": 5, "tag": "%d/%d called", "ev": "mythBuster", "bot": 0.66,
+             "fixed": ["Myth", "Fact"], "kicker": "Myth or fact?", "relay": "Judged statement "},
+    "first": {"n": 5, "time": 8, "fast": 5, "tag": "%d/%d in order", "ev": "timeLord", "bot": 0.65,
+              "ask": "Which came first?", "relay": "Picked pair "},
+    "math": {"n": 4, "time": 15, "fast": 8, "tag": "%d/%d solved", "ev": "mathWhiz", "bot": 0.6, "relay": "Solved problem "},
+}
 HINT_COST = 0.2  # each code hint takes 20% off that round's points
 TARGET = 0.65     # aim for questions a player gets right about 65% of the time
 SPIN_WAIT = 30    # seconds before an idle spinner's wheel spins itself
@@ -114,6 +129,13 @@ class Engine:
         self.trivia = [dict(item, topic=topics.get(t, t), tkey=t) for t, items in content["trivia"].items() for item in items]
         self.guess = [dict(item, topic=topics.get(item["t"], item["t"]), tkey=item["t"]) for item in content["guess"]]
         self.scams = [dict(item, topic=topics.get("safety", "Scam spotting"), tkey="safety") for item in content.get("scam", [])]
+        self.topics = topics
+        self.banks = {
+            "trivia": self.trivia,
+            "scam": self.scams,
+            "myth": [dict(item, topic=topics.get(item["t"], item["t"]), tkey=item["t"]) for item in content.get("myth", [])],
+            "first": [dict(item, topic=topics.get(item["t"], item["t"]), tkey=item["t"]) for item in content.get("first", [])],
+        }
         self.code = content["code"]
         self.mods = content["mods"]
         self.lock = threading.RLock()
@@ -313,8 +335,8 @@ class Engine:
         cat, mod = kind, None
         if kind == "chaos":
             cat = g.rng.choice(CATS)
-        if cat == "scam" and not self.scams:
-            cat = "trivia"
+        if cat in self.banks and len(self.banks[cat]) < QCATS[cat]["n"] + 1:
+            cat = "trivia"  # a bank too small for a round (the public sample content)
         if kind == "chaos" and self.mods.get(cat):
             mod = g.rng.choice(self.mods[cat])
         g.phase, g.at = "reveal", now + REVEAL
@@ -326,20 +348,21 @@ class Engine:
     def _begin(self, g):
         g.phase = "play"
         ch, n = g.ch, len(g.seats)
+        cat = ch["cat"]
         mod_id = ch["mod"]["id"] if ch["mod"] else ""
-        if ch["cat"] == "trivia":
-            count = 4 if mod_id == "extra" else 3
-            ch.update(qs=self._pick(self.trivia, g, count), qtime=5 if mod_id == "speed" else 10,
-                      penalty=50 if mod_id == "sudden" else 0, right=[0] * n)
+        if cat in QCATS:
+            cfg = QCATS[cat]
+            count = cfg["n"] + (1 if mod_id == "extra" else 0)
+            if cat == "math":
+                qs = [dict(it, topic=self.topics.get("finance", "Finance"), tkey="finance") for it in mathgen.make(g.rng, count)]
+            else:
+                qs = self._pick(self.banks[cat], g, count)
+            ch.update(qs=qs, qtime=cfg["fast"] if mod_id == "speed" else cfg["time"], qmax=ROUND_MAX // cfg["n"],
+                      penalty=PENALTY if mod_id == "sudden" else 0, right=[0] * n)
             self._send_q(g, 0)
-        elif ch["cat"] == "scam":
-            count = 5 if mod_id == "extra" else 4
-            ch.update(qs=self._pick(self.scams, g, count), qtime=6 if mod_id == "speed" else 12,
-                      penalty=50 if mod_id == "sudden" else 0, right=[0] * n)
-            self._send_q(g, 0)
-        elif ch["cat"] == "guess":
-            count = 4 if mod_id == "extra" else 3
-            ch.update(qs=self._pick(self.guess, g, count), qtime=8 if mod_id == "speed" else 15,
+        elif cat == "guess":
+            count = GUESS_N + (1 if mod_id == "extra" else 0)
+            ch.update(qs=self._pick(self.guess, g, count), qtime=8 if mod_id == "speed" else 15, qmax=ROUND_MAX / GUESS_N,
                       bull=mod_id == "bullseye", accs=[[] for _ in range(n)])
             self._send_est(g, 0)
         else:
@@ -367,41 +390,46 @@ class Engine:
         if not seat.bot:  # bots must not move question difficulty or anyone's mastery
             self.store.record_answer(seat.key, item["id"], item["tkey"], score)
 
-    # trivia
+    # question rounds: trivia, scam, myth, first, math
 
     def _send_q(self, g, i):
         ch, now = g.ch, time.time()
+        cat = ch["cat"]
+        cfg = QCATS[cat]
         item = ch["qs"][i]
-        scam = ch["cat"] == "scam"
-        if scam:
-            opts = list(SCAM_OPTS)
+        if cfg.get("fixed"):
+            opts = list(cfg["fixed"])
         else:
             opts = [item["a"]] + list(item["w"])
             g.rng.shuffle(opts)
         ch.update(qi=i, opts=opts, answer=opts.index(item["a"]), sent=now, deadline=now + ch["qtime"] + LAG,
                   picks=[None] * len(g.seats), gains=[0] * len(g.seats), stage="q")
-        msg = {"round": g.round, "i": i, "n": len(ch["qs"]), "q": "Scam or legit?" if scam else item["q"], "topic": item["topic"],
+        msg = {"round": g.round, "cat": cat, "i": i, "n": len(ch["qs"]), "q": cfg.get("ask") or item["q"], "topic": item["topic"],
                "opts": opts, "time": ch["qtime"]}
-        if scam:
+        if cfg.get("kicker"):
+            msg["kicker"] = cfg["kicker"]
+        if cat == "scam":
             msg["scam"] = {"channel": item["channel"], "from": item["from"], "body": item["body"], "context": item.get("context", "")}
         g.send("q", msg)
 
     def _answer(self, g, seat, data, now):
         ch = g.ch
         choice = data.get("choice")
-        if (ch.get("cat") not in ("trivia", "scam") or ch.get("stage") != "q" or data.get("i") != ch["qi"] or ch["picks"][seat.idx] is not None
+        if (ch.get("cat") not in QCATS or ch.get("stage") != "q" or data.get("i") != ch["qi"] or ch["picks"][seat.idx] is not None
                 or not isinstance(choice, int) or isinstance(choice, bool) or not 0 <= choice < len(ch["opts"]) or now > ch["deadline"]):
             return
         item = ch["qs"][ch["qi"]]
         correct = choice == ch["answer"]
-        gain = 50 + round(50 * max(0.0, 1 - (now - ch["sent"]) / ch["qtime"])) if correct else -ch["penalty"]
+        base = ch["qmax"] // 2
+        speed = max(0.0, 1 - (now - ch["sent"]) / ch["qtime"])
+        gain = base + round((ch["qmax"] - base) * speed) if correct else -ch["penalty"]
         ch["picks"][seat.idx], ch["gains"][seat.idx] = choice, gain
         g.raw[seat.idx] += gain
         if correct:
             ch["right"][seat.idx] += 1
         self._record(seat, item, 1.0 if correct else 0.0)
         for o in g.others(seat):
-            o.push("relay", {"round": g.round, "text": ("Judged message " if ch["cat"] == "scam" else "Answered question ") + str(ch["qi"] + 1)})
+            o.push("relay", {"round": g.round, "text": QCATS[ch["cat"]].get("relay", "Answered question ") + str(ch["qi"] + 1)})
         if all(p is not None for p in ch["picks"]):
             self._close_q(g)
 
@@ -417,10 +445,10 @@ class Engine:
 
     def _end_trivia(self, g):
         ch, n = g.ch, len(g.ch["qs"])
-        scam = ch["cat"] == "scam"
+        cfg = QCATS[ch["cat"]]
         for i in range(len(g.seats)):
-            g.tags[i] = [("%d/%d spotted" if scam else "%d/%d right") % (ch["right"][i], n)]
-            g.ev[i] = {"scamBuster" if scam else "bigBrain": ch["right"][i] == n}
+            g.tags[i] = [cfg["tag"] % (ch["right"][i], n)]
+            g.ev[i] = {cfg["ev"]: ch["right"][i] == n}
 
     # estimation
 
@@ -441,6 +469,7 @@ class Engine:
         if not item["min"] <= value <= item["max"]:
             return
         pts, acc = judge.guess_points(item, value, ch["bull"])
+        pts = round(pts * ch["qmax"] / 100)
         ch["vals"][seat.idx], ch["pts"][seat.idx] = value, pts
         ch["accs"][seat.idx].append(acc)
         g.raw[seat.idx] += pts
@@ -462,8 +491,9 @@ class Engine:
             accs = [ch["accs"][i][-1] for i in range(2)]
             if accs[0] != accs[1] and max(accs) > 0:
                 closest = 0 if accs[0] > accs[1] else 1
-                ch["pts"][closest] += 20
-                g.raw[closest] += 20
+                bonus = round(20 * ch["qmax"] / 100)
+                ch["pts"][closest] += bonus
+                g.raw[closest] += bonus
         ch.update(stage="gap", next_at=time.time() + GAP)
         g.send("estres", {"round": g.round, "i": ch["qi"], "answer": item["a"], "unit": item["unit"], "vals": ch["vals"],
                           "pts": ch["pts"], "closest": closest, "why": item.get("why", ""), "scale": item["scale"],
@@ -577,11 +607,11 @@ class Engine:
         elif g.phase == "play":
             ch = g.ch
             cat = ch["cat"]
-            if cat in ("trivia", "scam") and ch.get("stage") == "q" and ch["picks"][b.idx] is None:
+            if cat in QCATS and ch.get("stage") == "q" and ch["picks"][b.idx] is None:
                 key = ("q", g.round, ch["qi"])
                 if plan.get("k") != key:
-                    lo, hi = (1.5, 4.0) if ch["qtime"] <= 6 else (2.5, 7.5)
-                    right = random.random() < (0.7 if cat == "scam" else 0.62)
+                    lo, hi = (1.5, 4.0) if ch["qtime"] <= 6 else (2.5, min(10.0, ch["qtime"] - 2))
+                    right = random.random() < QCATS[cat]["bot"]
                     choice = ch["answer"] if right else random.choice([i for i in range(len(ch["opts"])) if i != ch["answer"]])
                     plan.clear()
                     plan.update(k=key, at=ch["sent"] + random.uniform(lo, hi), choice=choice)
@@ -744,7 +774,7 @@ class Engine:
                 self._begin(g)
             elif g.phase == "play":
                 cat = g.ch["cat"]
-                if cat in ("trivia", "scam"):
+                if cat in QCATS:
                     self._tick_questions(g, now, self._close_q, self._send_q, self._end_trivia)
                 elif cat == "guess":
                     self._tick_questions(g, now, self._close_est, self._send_est, self._end_guess)

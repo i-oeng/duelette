@@ -16,12 +16,17 @@ Each round you spin a wheel:
 
 | Wedge | What happens | What you learn |
 |---|---|---|
-| **Trivia Blitz** | 3 quick questions, many on US personal finance (credit scores, 401(k), inflation); faster right answers score more | A one-line "why" after every answer |
-| **Ballpark** | Estimate a number ("how far away is the Moon?") | The real number, how far off you were, and why |
-| **Spot the Scam** | 4 real-looking texts, emails, calls and pop-ups: call each one Scam or Legit | The tell (lookalike domain, gift card request, a code you never asked for) or why it is safe |
-| **Code Sprint** | Write one JavaScript function against live tests; stuck players can take up to 2 hints, each costing 20% of the round | Your code side by side with a model solution (and your opponent's) |
+| **Trivia Blitz** | 5 quick questions, many on US personal finance (credit scores, 401(k), inflation); faster right answers score more | A one-line "why" after every answer |
+| **Money Math** | 4 everyday dollar problems: tips, discounts, splitting a bill, card interest, hourly pay to yearly pay. Generated on the server, so they never run out | The worked answer, step by step |
+| **Myth or Fact** | 5 things people believe ("checking your own credit score lowers it"); call each one | Why it is a myth, or why it is true |
+| **Which Came First?** | 5 pairs of events ("YouTube or the first iPhone?"); pick the earlier one | Both dates |
+| **Spot the Scam** | 5 real-looking texts, emails, calls and pop-ups: call each one Scam or Legit | The tell (lookalike domain, gift card request, a code you never asked for) or why it is safe |
+| **Ballpark** | Estimate 4 numbers ("how far away is the Moon?") | The real number, how far off you were, and why |
+| **Code Sprint** | Write one JavaScript function against live tests; up to 2 hints, each costing 20% of the round | Your code side by side with a model solution (and your opponent's) |
 | **Jackpot** | Doubles the next challenge and spins again | |
-| **Chaos** | A random challenge with a twist (Sudden Death, Bullseye, No Loops...) | |
+| **Chaos** | A random challenge with a twist (Sudden Death, Speed round, Overtime, No Loops...) | |
+
+Every round pays at most 300 points whatever its length, so no wedge is worth more than another.
 
 Five spins make a game, about five minutes.
 
@@ -39,7 +44,9 @@ Five spins make a game, about five minutes.
 - **Questions that fit you**: every question carries a difficulty rating that moves like a chess rating, and each player gets questions they answer right about 65% of the time.
 - Badges, jackpots, win streaks and a world ranking.
 
-The private bank holds 173 trivia questions, 29 estimates, 26 scam messages and 50 code challenges (255 tests), each with an explanation or hints.
+The private bank holds 173 trivia questions, 34 myth or fact statements, 27 event pairs, 26 scam messages, 29 estimates and 50 code challenges (255 tests), each with an explanation or hints, plus Money Math problems generated on the fly.
+
+Two color themes: **Classic** (sunburst yellow) and **Zimrany**, in the violet of zimran.io, one of the Business Cup 2.0 organizers. The header button switches them; the choice is saved on the device.
 
 ## Business model
 
@@ -63,6 +70,7 @@ browser (index.html, style.css, js/*.js: vanilla, no build step)
    |  HTTPS + server-sent events
 server.py   HTTP API and event stream (Python standard library only)
 engine.py   game engine: matchmaking, rooms, practice bot, Daily Duel, scoring
+mathgen.py  Money Math problems with computed answers and plausible wrong ones
 accounts.py SQLite: accounts, sessions, ratings, streaks, plans, question difficulty, mastery
 judge.py    estimation scoring and sandboxed code checks (sandbox/runner.js inside bubblewrap)
 billing.py  Lemon Squeezy checkout and signed webhooks

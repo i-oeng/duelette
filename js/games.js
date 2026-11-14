@@ -26,16 +26,22 @@ DL.games = (function () {
   const trivia = {
     q(d, ctx) {
       DL.fx.clear();
-      cur = { cat: "trivia", round: d.round, i: d.i, pick: null, opts: d.opts, scam: !!d.scam };
+      // One renderer for every question mode: trivia, scam, myth, first, math.
+      const kind = DL.CATS[d.cat] ? d.cat : (d.scam ? "scam" : "trivia");
+      cur = { cat: "trivia", kind, round: d.round, i: d.i, pick: null, opts: d.opts };
       const m = d.scam;
       const msg = m ? '<div class="scam-msg"><div class="scam-top"><span class="scam-ch">' + esc(m.channel) + '</span><span class="scam-from">' + esc(m.from) + "</span></div>" +
         '<p class="scam-body">' + esc(m.body) + "</p></div>" + (m.context ? '<p class="scam-ctx">' + esc(m.context) + "</p>" : "") : "";
+      const unit = { scam: "Message ", myth: "Statement ", first: "Pair ", math: "Problem " }[kind] || "Question ";
+      const hint = { scam: "Scam or legit? Faster right calls score more.", myth: "Myth or fact? Faster right calls score more.",
+        first: "Pick the one that happened first.", math: "Work it out. Faster right answers score more." }[kind] || "Pick an answer. Faster right answers score more.";
       const p = mount(
-        '<div class="card">' + catHead(m ? "scam" : "trivia", '<span class="pill">' + (m ? "Message " : "Question ") + (d.i + 1) + " of " + d.n + "</span>") +
+        '<div class="card">' + catHead(kind, '<span class="pill">' + unit + (d.i + 1) + " of " + d.n + "</span>") +
         '<div class="card-body"><div class="badges"><span class="pill topic">' + esc(d.topic) + "</span>" + modBadge(ctx.mod) + "</div>" +
-        '<h2 class="tq">' + esc(d.q) + "</h2>" + msg + '<div id="tmr"></div><div class="opts' + (m ? " opts-scam" : "") + '">' +
+        (d.kicker ? '<p class="kicker">' + esc(d.kicker) + "</p>" : "") +
+        '<h2 class="tq' + (kind === "myth" ? " tq-big" : "") + '">' + esc(d.q) + "</h2>" + msg + '<div id="tmr"></div><div class="opts' + (d.opts.length === 2 ? " opts-two" : "") + '">' +
         d.opts.map((o, i) => '<button class="opt-btn" type="button" data-i="' + i + '"><span class="k">' + (i + 1) + '</span><span class="opt-text">' + esc(o) + "</span></button>").join("") +
-        '</div><p class="g-status" id="gStatus" aria-live="polite">' + (m ? "Scam or legit? Faster right calls score more." : "Pick an answer. Faster right answers score more.") + '</p><p class="g-why" id="gWhy" hidden></p>' + oppSlot() + "</div></div>"
+        '</div><p class="g-status" id="gStatus" aria-live="polite">' + hint + '</p><p class="g-why" id="gWhy" hidden></p>' + oppSlot() + "</div></div>"
       );
       const btns = Array.from(p.querySelectorAll(".opt-btn"));
       cur.btns = btns;
@@ -92,7 +98,8 @@ DL.games = (function () {
       } else {
         sfx.wrong();
         DL.fx.shake(cur.btns[d.answer].closest(".card"));
-        status((mine === null ? "No answer. " : "Wrong. ") + (cur.scam ? (cur.opts[d.answer] === "Scam" ? "It was a scam." : "It was legit.") : "The answer was " + cur.opts[d.answer] + ".") + (gain < 0 ? " " + gain + " pts" : ""), "bad");
+        status((mine === null ? "No answer. " : "Wrong. ") + ({ scam: cur.opts[d.answer] === "Scam" ? "It was a scam." : "It was legit.", myth: cur.opts[d.answer] === "Myth" ? "It's a myth." : "It's a fact.",
+          first: cur.opts[d.answer] + " came first." }[cur.kind] || "The answer was " + cur.opts[d.answer] + ".") + (gain < 0 ? " " + gain + " pts" : ""), "bad");
       }
     }
   };

@@ -186,27 +186,27 @@
    "id": "g-sci-01",
    "t": "science",
    "q": "How far is the Moon from Earth, on average?",
-   "a": 384400,
-   "unit": "km",
-   "min": 10000,
-   "max": 10000000,
+   "a": 238855,
+   "unit": "miles",
+   "min": 5000,
+   "max": 5000000,
    "scale": "log",
    "tol": 3,
    "step": 100,
-   "why": "About 384,400 km, roughly 30 Earths lined up side by side."
+   "why": "About 238,900 miles, roughly 30 Earths lined up side by side."
   },
   {
-   "id": "g-geo-01",
+   "id": "g-geo-07",
    "t": "geography",
-   "q": "How many people live in Almaty?",
-   "a": 2200000,
+   "q": "How many people lived in New York City at the 2020 census?",
+   "a": 8804190,
    "unit": "people",
    "min": 100000,
-   "max": 20000000,
+   "max": 50000000,
    "scale": "log",
    "tol": 2,
    "step": 1,
-   "why": "Almaty passed 2 million residents in 2021 and is Kazakhstan's largest city."
+   "why": "8,804,190, more than Los Angeles and Chicago combined."
   },
   {
    "id": "g-tec-01",
@@ -225,14 +225,14 @@
    "id": "g-cul-01",
    "t": "culture",
    "q": "How long is a marathon?",
-   "a": 42.195,
-   "unit": "km",
-   "min": 10,
-   "max": 100,
+   "a": 26.2,
+   "unit": "miles",
+   "min": 5,
+   "max": 60,
    "scale": "lin",
-   "tol": 25,
+   "tol": 15,
    "step": 0.1,
-   "why": "42.195 km, fixed in 1921 after the route of the 1908 London Olympics."
+   "why": "26.2 miles (42.195 km), fixed in 1921 after the route of the 1908 London Olympics."
   }
  ],
  "code": [
@@ -576,12 +576,12 @@
    {
     "id": "sudden",
     "label": "Sudden death",
-    "desc": "Wrong answers cost 50 points."
+    "desc": "Wrong answers cost 30 points."
    },
    {
     "id": "extra",
     "label": "Overtime",
-    "desc": "4 questions instead of 3."
+    "desc": "6 questions instead of 5."
    }
   ],
   "guess": [
@@ -598,7 +598,7 @@
    {
     "id": "extra",
     "label": "Overtime",
-    "desc": "4 questions instead of 3."
+    "desc": "5 guesses instead of 4."
    }
   ],
   "scam": [
@@ -610,12 +610,63 @@
    {
     "id": "sudden",
     "label": "Sudden death",
-    "desc": "Wrong calls cost 50 points."
+    "desc": "Wrong calls cost 30 points."
    },
    {
     "id": "extra",
     "label": "Overtime",
-    "desc": "5 messages instead of 4."
+    "desc": "6 messages instead of 5."
+   }
+  ],
+  "math": [
+   {
+    "id": "speed",
+    "label": "Speed round",
+    "desc": "8 seconds per problem."
+   },
+   {
+    "id": "sudden",
+    "label": "Sudden death",
+    "desc": "Wrong answers cost 30 points."
+   },
+   {
+    "id": "extra",
+    "label": "Overtime",
+    "desc": "5 problems instead of 4."
+   }
+  ],
+  "myth": [
+   {
+    "id": "speed",
+    "label": "Speed round",
+    "desc": "5 seconds per statement."
+   },
+   {
+    "id": "sudden",
+    "label": "Sudden death",
+    "desc": "Wrong calls cost 30 points."
+   },
+   {
+    "id": "extra",
+    "label": "Overtime",
+    "desc": "6 statements instead of 5."
+   }
+  ],
+  "first": [
+   {
+    "id": "speed",
+    "label": "Speed round",
+    "desc": "5 seconds per pair."
+   },
+   {
+    "id": "sudden",
+    "label": "Sudden death",
+    "desc": "Wrong picks cost 30 points."
+   },
+   {
+    "id": "extra",
+    "label": "Overtime",
+    "desc": "6 pairs instead of 5."
    }
   ]
  },
@@ -653,6 +704,106 @@
    "a": "Legit",
    "why": "You started the call on a number you trust, and they ask for limited details, not your PIN, full card number or one-time code.",
    "context": "You called the number printed on the back of your debit card."
+  }
+ ],
+ "myth": [
+  {
+   "id": "y-fin-01",
+   "t": "finance",
+   "q": "Checking your own credit score lowers it.",
+   "a": "Myth",
+   "why": "Checking your own score is a soft inquiry and never affects it. Hard inquiries come from applying for credit."
+  },
+  {
+   "id": "y-fin-02",
+   "t": "finance",
+   "q": "You need to carry a credit card balance to build credit.",
+   "a": "Myth",
+   "why": "Paying in full every month builds the same history without paying any interest."
+  },
+  {
+   "id": "y-fin-03",
+   "t": "finance",
+   "q": "Closing an old credit card can lower your credit score.",
+   "a": "Fact",
+   "why": "It cuts your available credit, which raises your utilization, and can shorten the average age of your accounts."
+  },
+  {
+   "id": "y-fin-04",
+   "t": "finance",
+   "q": "Your salary is part of your credit score.",
+   "a": "Myth",
+   "why": "Credit scores use your borrowing history, not your income."
+  },
+  {
+   "id": "y-fin-05",
+   "t": "finance",
+   "q": "You can take out the money you put into a Roth IRA at any time without tax or penalty.",
+   "a": "Fact",
+   "why": "Contributions come out first and are always tax and penalty free. The earnings have stricter rules."
+  },
+  {
+   "id": "y-fin-06",
+   "t": "finance",
+   "q": "Over long periods, US stocks have grown far more than savings accounts.",
+   "a": "Fact",
+   "why": "US stocks have averaged roughly 10% a year over the past century before inflation, with big swings along the way."
+  }
+ ],
+ "first": [
+  {
+   "id": "w-tec-01",
+   "t": "tech",
+   "a": "YouTube launched",
+   "w": [
+    "The first iPhone went on sale"
+   ],
+   "why": "YouTube launched in 2005; the first iPhone went on sale in 2007."
+  },
+  {
+   "id": "w-his-02",
+   "t": "history",
+   "a": "Harvard was founded",
+   "w": [
+    "Isaac Newton published his laws of motion"
+   ],
+   "why": "Harvard was founded in 1636; Newton published his laws in 1687."
+  },
+  {
+   "id": "w-fin-03",
+   "t": "finance",
+   "a": "The Diners Club credit card",
+   "w": [
+    "The first Ray Kroc McDonald's"
+   ],
+   "why": "The Diners Club card launched in 1950; Ray Kroc opened his first McDonald's in 1955."
+  },
+  {
+   "id": "w-tec-04",
+   "t": "tech",
+   "a": "The fax machine was patented",
+   "w": [
+    "The telephone was patented"
+   ],
+   "why": "Alexander Bain patented an early fax in 1843, 33 years before Bell's telephone patent."
+  },
+  {
+   "id": "w-fin-05",
+   "t": "finance",
+   "a": "Social Security became law",
+   "w": [
+    "The federal minimum wage began"
+   ],
+   "why": "The Social Security Act was signed in 1935; the federal minimum wage started in 1938 at 25 cents an hour."
+  },
+  {
+   "id": "w-fin-06",
+   "t": "finance",
+   "a": "The first cash machine (ATM) opened",
+   "w": [
+    "Apollo 11 landed on the Moon"
+   ],
+   "why": "The first cash machine opened in London in June 1967; Apollo 11 landed in July 1969."
   }
  ]
 }

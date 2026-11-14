@@ -113,15 +113,22 @@ DL.Wheel = function (canvas) {
       ctx.fillStyle = sg.text;
       ctx.textBaseline = "middle";
       ctx.textAlign = "right";
-      fitText(sg.label, r * 0.46, Math.round(s * 0.042));
-      ctx.fillText(sg.label, r - s * 0.03, 0);
-      // icon badge: white disc with the category icon
-      const isz = s * 0.07;
+      // icon badge: a white disc that fits inside its own wedge, between the hub and the label
+      const bd = r * 0.37;
+      const br = Math.min(s * 0.05, bd * Math.sin(seg / 2) * 0.8);
+      const labelEnd = r - s * 0.03;
+      fitText(sg.label, Math.min(r * 0.46, labelEnd - (bd + br) - s * 0.015), Math.round(s * 0.04));
+      ctx.fillText(sg.label, labelEnd, 0);
       ctx.fillStyle = "#ffffff";
-      circle(r * 0.31, 0, isz * 0.75); ctx.fill();
-      ctx.lineWidth = Math.max(2, s * 0.006); ctx.strokeStyle = INK; ctx.stroke();
+      circle(bd, 0, br); ctx.fill();
+      ctx.lineWidth = Math.max(1.5, s * 0.005); ctx.strokeStyle = INK; ctx.stroke();
+      const isz = br * 1.42;
       const ic = DL.art.iconImage(sg.icon);
-      if (ic.complete && ic.naturalWidth) ctx.drawImage(ic, r * 0.31 - isz / 2, -isz / 2, isz, isz);
+      if (ic.complete && ic.naturalWidth) {
+        ctx.save(); ctx.translate(bd, 0); ctx.rotate(-(rot + i * seg + seg / 2)); // icons stay upright
+        ctx.drawImage(ic, -isz / 2, -isz / 2, isz, isz);
+        ctx.restore();
+      }
       ctx.restore();
     }
 

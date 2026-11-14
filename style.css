@@ -794,11 +794,40 @@ kbd {
 .scam-body { margin: 0; padding: 12px 14px 14px; font-size: 17px; line-height: 1.45; overflow-wrap: anywhere; }
 .scam-ctx { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
 .scam-ctx::before { content: "Context: "; font-weight: 700; color: var(--ink); }
-.opts-scam .opt-btn { justify-content: center; font-size: 18px; }
-.opts-scam .opt-btn[data-i="0"]:not(:disabled):hover { background: #ffe0e8; }
-.opts-scam .opt-btn[data-i="1"]:not(:disabled):hover { background: #e8fbd0; }
-@media (max-width: 640px) { .opts.opts-scam { grid-template-columns: 1fr 1fr; } }
+.opts-two .opt-btn { justify-content: center; font-size: 18px; }
+.opts-two .opt-btn[data-i="0"]:not(:disabled):hover { background: #ffe0e8; }
+.opts-two .opt-btn[data-i="1"]:not(:disabled):hover { background: #e8fbd0; }
+@media (max-width: 640px) { .opts.opts-two { grid-template-columns: 1fr 1fr; } }
 .hint-box { margin: 10px 0 0; padding: 10px 14px; border: 2px dashed var(--ink); border-radius: 14px; background: #fff8d6; }
 .hint-line { margin: 4px 0; font-size: 15px; }
 .hint-k { font-family: var(--f-display); font-size: 12px; letter-spacing: .05em; margin-right: 8px; background: var(--ink); color: #ffe14d; border-radius: 999px; padding: 1px 8px; }
 .hint-note { margin: 6px 0 2px; font-size: 13px; color: var(--muted); }
+
+/* v10: Myth or Fact, Which Came First, Money Math */
+.kicker { margin: 0 0 4px; font-family: var(--f-display); font-size: 14px; letter-spacing: .06em; color: #c8164a; }
+.tq-big { font-size: clamp(22px, 3.8vw, 34px); line-height: 1.25; }
+.opts-two .opt-btn { min-height: 64px; }
+
+/* Zimrany theme: the violet, black and white of zimran.io, a Business Cup 2.0 organizer.
+   Category colors stay the same so every wedge keeps its meaning. */
+html[data-theme="zimrany"] {
+  --sun: #5b42dc;
+  --sun-deep: #4f31ba;
+  --ink: #0c0c0c;
+  --paper: #f2f2f2;
+  --paper-2: #e2e2ed;
+  --muted: #4a4560;
+  --p2: #3a2db8;
+}
+html[data-theme="zimrany"] .sunburst::after {
+  background: radial-gradient(circle at center, transparent 0 18vmax, rgba(79, 49, 186, .6) 60vmax);
+}
+html[data-theme="zimrany"] .logo-mini,
+html[data-theme="zimrany"] .tagline,
+html[data-theme="zimrany"] .mode-note { color: #f2f2f2; }
+html[data-theme="zimrany"] .btn-go { --c: #7367ff; }
+html[data-theme="zimrany"] .hint-box { background: #ecebfb; }
+.th-swatch { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); background: linear-gradient(135deg, #ffd23f 50%, #5b42dc 50%); flex: none; }
+html[data-theme="zimrany"] .th-swatch { background: linear-gradient(135deg, #5b42dc 50%, #f2f2f2 50%); }
+@media (max-width: 560px) { .th-pre, #themeName { display: none; } .top-actions .btn-sm { white-space: nowrap; } }
+@media (max-width: 420px) { .top-actions .btn-sm { font-size: 10px; padding: 6px 8px; } }
