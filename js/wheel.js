@@ -90,13 +90,6 @@ DL.Wheel = function (canvas) {
       ctx.closePath();
       ctx.fillStyle = segs[i].color;
       ctx.fill();
-      if (segs[i].type === "jack") {
-        // candy stripes on the jackpot wedge
-        ctx.save(); ctx.clip();
-        ctx.strokeStyle = P.stripe; ctx.lineWidth = s * 0.02;
-        for (let k = 1; k < 7; k++) { ctx.beginPath(); ctx.arc(cx, cy, r * k / 7, a0, a0 + seg); ctx.stroke(); }
-        ctx.restore();
-      }
       if (i === hiIndex && now < hiUntil) {
         ctx.fillStyle = "rgba(255,255,255," + (0.3 + 0.3 * Math.sin(now / 70)) + ")";
         ctx.fill();
@@ -115,17 +108,14 @@ DL.Wheel = function (canvas) {
       ctx.fillStyle = sg.text;
       ctx.textBaseline = "middle";
       ctx.textAlign = "right";
-      // icon badge: a white disc that fits inside its own wedge, between the hub and the label
+      // icon: a line glyph in the label color, drawn straight on the wedge between the hub and the label
       const bd = r * 0.37;
       const br = Math.min(s * 0.05, bd * Math.sin(seg / 2) * 0.8);
       const labelEnd = r - s * 0.03;
       fitText(sg.label, Math.min(r * 0.46, labelEnd - (bd + br) - s * 0.015), Math.round(s * 0.04));
       ctx.fillText(sg.label, labelEnd, 0);
-      ctx.fillStyle = "#ffffff";
-      circle(bd, 0, br); ctx.fill();
-      ctx.lineWidth = Math.max(1.5, s * 0.005); ctx.strokeStyle = INK; ctx.stroke();
-      const isz = br * 1.42;
-      const ic = DL.art.iconImage(sg.icon);
+      const isz = br * 1.85;
+      const ic = DL.art.glyphImage(sg.icon, sg.text);
       if (ic.complete && ic.naturalWidth) {
         ctx.save(); ctx.translate(bd, 0); ctx.rotate(-(rot + i * seg + seg / 2)); // icons stay upright
         ctx.drawImage(ic, -isz / 2, -isz / 2, isz, isz);

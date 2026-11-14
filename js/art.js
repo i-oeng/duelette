@@ -94,6 +94,20 @@ DL.art = (function () {
   const pick = (i) => CRITTERS[((Number(i) || 0) % CRITTERS.length + CRITTERS.length) % CRITTERS.length];
 
   const cache = {};
+  const GS = 'stroke="%C%" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  const GLYPHS = {
+    quiz: '<path d="M4 4H20V16.5H11L6 20.5V16.5H4Z" ' + GS + '/><path d="M9.6 8.4C9.6 6.3 14.4 6.3 14.4 8.4C14.4 10.1 12 10.2 12 12" ' + GS + '/><circle cx="12" cy="14.4" r="1.25" fill="%C%"/>',
+    target: '<circle cx="12" cy="12" r="9" ' + GS + '/><circle cx="12" cy="12" r="5.2" ' + GS + '/><circle cx="12" cy="12" r="1.9" fill="%C%"/>',
+    shield: '<path d="M12 2.5L19.5 5.3V11C19.5 15.8 16.3 19.6 12 21.5C7.7 19.6 4.5 15.8 4.5 11V5.3Z" ' + GS + '/><path d="M8.6 11.8L11 14.2L15.6 9.6" ' + GS + '/>',
+    calc: '<rect x="5" y="2.5" width="14" height="19" rx="2.8" ' + GS + '/><rect x="8" y="5.6" width="8" height="3.4" rx="0.8" fill="%C%"/>' +
+      '<circle cx="9" cy="13" r="1.15" fill="%C%"/><circle cx="12" cy="13" r="1.15" fill="%C%"/><circle cx="15" cy="13" r="1.15" fill="%C%"/>' +
+      '<circle cx="9" cy="17" r="1.15" fill="%C%"/><circle cx="12" cy="17" r="1.15" fill="%C%"/><circle cx="15" cy="17" r="1.15" fill="%C%"/>',
+    coin: '<circle cx="12" cy="12" r="9.2" ' + GS + '/><path d="M14.7 8.7C14.1 7.9 13.1 7.5 12 7.5C10.4 7.5 9.3 8.4 9.3 9.6C9.3 12.4 14.8 11.3 14.8 14.4C14.8 15.7 13.6 16.7 12 16.7C10.8 16.7 9.8 16.2 9.2 15.3M12 5.6V7.5M12 16.7V18.4" ' + GS + '/>',
+    code: '<path d="M8 6.5L2.8 12L8 17.5M16 6.5L21.2 12L16 17.5M13.8 4.5L10.2 19.5" ' + GS + '/>',
+    toggle: '<rect x="2.5" y="6.5" width="19" height="11" rx="5.5" ' + GS + '/><circle cx="8" cy="12" r="3" fill="%C%"/>',
+    hourglass: '<path d="M6.5 2.8H17.5M6.5 21.2H17.5M8 2.8C8 8 12 9.6 12 12C12 14.4 8 16 8 21.2M16 2.8C16 8 12 9.6 12 12C12 14.4 16 16 16 21.2" ' + GS + '/><path d="M9.6 19.6C9.6 17.6 12 16.6 12 16.6C12 16.6 14.4 17.6 14.4 19.6Z" fill="%C%"/>',
+    chaos: '<path d="M3 7H6.5C9.8 7 10.8 9.4 12 12C13.2 14.6 14.2 17 17.5 17H21M18 14L21 17L18 20M3 17H6.5C8.2 17 9.2 16.3 10 15.2M14 8.8C14.8 7.7 15.8 7 17.5 7H21M18 4L21 7L18 10" ' + GS + '/>'
+  };
   const ZIM = { "#ffe14d": "#e2e2ed", "#ff2e63": "#5b42dc", "#1f6bff": "#2a1d7a", "#b6f03c": "#c9c2ff", "#ff7a00": "#7367ff",
     "#8c52ff": "#5553f5", "#00c9c8": "#9d8fff", "#ffbe0b": "#9d8fff", "#e0b800": "#7367ff", "#1b1035": "#0c0c0c", "#ffd23f": "#c9c2ff" };
   const tint = (m) => (DL.theme && DL.theme() === "zimrany" ? m.replace(/#[0-9a-fA-F]{6}/g, (h) => ZIM[h.toLowerCase()] || h) : m);
@@ -116,6 +130,8 @@ DL.art = (function () {
     // Image elements for canvas drawing (wheel hub and wedge icons).
     avatarImage: (i) => image(svg(100, pick(i).body, "", 200)),
     iconImage: (k) => image(tint(svg(24, ICONS[k] || ICONS.sparkle, "", 96))),
+    // One-color line versions of the wheel icons, drawn straight on a wedge in its label color.
+    glyphImage: (k, color) => image(svg(24, (GLYPHS[k] || GLYPHS.quiz).split("%C%").join(color), "", 96)),
     // Avatar ids as stored on the world ranking server.
     toId: (i) => "c" + (Number(i) || 0),
     fromId: (id) => { const m = /^c(\d+)$/.exec(id || ""); return m ? Number(m[1]) % CRITTERS.length : 0; }
