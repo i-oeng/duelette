@@ -4,7 +4,7 @@
   const sfx = DL.audio.sfx;
   const $ = (id) => document.getElementById(id);
   const WHEEL = ["trivia", "guess", "scam", "math", "jack", "code", "myth", "first", "trivia", "chaos"]; // matches engine.py
-  const PCOL = ["#ff2e63", "#1f6bff"]; // you are always pink, the opponent blue
+  const PCOL = [DL.pal().you, DL.pal().opp]; // you and your opponent (pink and blue in Classic)
 
   const ACH = {
     firstBlood: ["bolt", "First blood: won a duel round"],
@@ -43,10 +43,22 @@
   const wheel = DL.Wheel($("wheel"));
   let lastTick = 0;
   wheel.onTick(() => { const n = performance.now(); if (n - lastTick > 28) { lastTick = n; sfx.tick(); } });
-  wheel.setSegments(WHEEL.map((k) =>
-    k === "jack" ? { type: "jack", label: "Jackpot", icon: "coin", color: "#ffe14d", text: "#1b1035" }
-      : k === "chaos" ? { type: "chaos", label: "Chaos", icon: "chaos", color: "#1b1035", text: "#ffe14d" }
-        : { type: "cat", cat: k, label: DL.CATS[k].label, icon: DL.CATS[k].icon, color: DL.CATS[k].color, text: DL.CATS[k].text }));
+  const wheelSegs = () => {
+    const P = DL.pal();
+    return WHEEL.map((k) =>
+      k === "jack" ? { type: "jack", label: "Jackpot", icon: "coin", color: P.cats.jack[0], text: P.cats.jack[1] }
+        : k === "chaos" ? { type: "chaos", label: "Chaos", icon: "chaos", color: P.cats.chaos[0], text: P.cats.chaos[1] }
+          : { type: "cat", cat: k, label: DL.CATS[k].label, icon: DL.CATS[k].icon, color: DL.CATS[k].color, text: DL.CATS[k].text });
+  };
+  wheel.setSegments(wheelSegs());
+  // After a theme switch: re-color what scripts draw (CSS restyles the rest by itself).
+  function syncTheme() {
+    DL.applyPalette();
+    PCOL[0] = DL.pal().you; PCOL[1] = DL.pal().opp;
+    wheel.setSegments(wheelSegs());
+    document.querySelectorAll("[data-icon]").forEach((el) => (el.innerHTML = DL.art.icon(el.dataset.icon)));
+    if (S.phase === "home") renderHome();
+  }
 
   function show(id) {
     ["scr-home", "scr-arena", "scr-final", "scr-rank"].forEach((s) => ($(s).hidden = s !== id));
@@ -80,7 +92,7 @@
   }
 
   function buildHome() {
-    const cols = ["var(--p1)", "var(--code)", "var(--p2)", "var(--draw)", "var(--trivia)", "var(--photo)", "var(--jack)", "var(--p1)"];
+    const cols = ["var(--lg1)", "var(--lg2)", "var(--lg3)", "var(--lg4)", "var(--lg5)", "var(--lg6)", "var(--lg7)", "var(--lg8)"];
     $("logo").innerHTML = "DUELETTE".split("").map((ch, i) =>
       '<span class="ltr" aria-hidden="true" style="--i:' + i + ";--c:" + cols[i] + '">' + ch + "</span>").join("");
     document.querySelectorAll("[data-icon]").forEach((el) => (el.innerHTML = DL.art.icon(el.dataset.icon)));
@@ -397,7 +409,7 @@
     if (r.status === 200) {
       $("paywall").hidden = true;
       sfx.achievement();
-      DL.fx.rain(2, ["#ffe14d", "#ffffff", "#ff2e63"]);
+      DL.fx.rain(2, [DL.pal().gold, "#ffffff", DL.pal().hot]);
       DL.fx.toast(DL.art.icon("crown"), "You're unlimited", "Unlimited games are on");
       renderHome();
       return;
@@ -620,7 +632,7 @@
       await wait(2600);
     } else {
       sfx.fanfare();
-      if (d.daily) await DL.fx.banner("Daily Duel", "Same 5 spins for everyone today", "#ffe14d", 1500);
+      if (d.daily) await DL.fx.banner("Daily Duel", "Same 5 spins for everyone today", DL.pal().gold, 1500);
     }
     phaseSpin();
   }
@@ -685,9 +697,9 @@
     if (d.jackpot) {
       if ((S.mode === "solo" || d.spinner === S.me) && ++S.jackCount >= 2) unlock("jackpotJunkie");
       sfx.jackpot();
-      DL.fx.rain(1.4, ["#ffe14d", "#ffffff", "#ff7a00"]);
+      DL.fx.rain(1.4, [DL.pal().gold, "#ffffff", DL.pal().warm]);
       renderHud();
-      await DL.fx.banner("Jackpot!", "Next challenge scores x" + S.mult + ". Spin again!", "#ffe14d", 1700);
+      await DL.fx.banner("Jackpot!", "Next challenge scores x" + S.mult + ". Spin again!", DL.pal().gold, 1700);
       if (gen !== S.gen) return;
       phaseSpin();
       return;
@@ -697,7 +709,7 @@
     if (d.mod) {
       sfx.chaos();
       DL.fx.shake();
-      await DL.fx.banner("Chaos!", DL.CATS[d.cat].name + ": " + d.mod.label, "#ff2e63", 1500);
+      await DL.fx.banner("Chaos!", DL.CATS[d.cat].name + ": " + d.mod.label, DL.pal().hot, 1500);
       if (gen !== S.gen) return;
     }
     await reveal(d);
@@ -782,7 +794,7 @@
     if (win || (solo && d.totals[me] > 0)) {
       sfx.win();
       const c = DL.fx.centerOf(p.querySelector(".res-row"));
-      DL.fx.burst(c.x, c.y, { count: 80, colors: [PCOL[0], "#ffe14d", "#ffffff"] });
+      DL.fx.burst(c.x, c.y, { count: 80, colors: [PCOL[0], DL.pal().gold, "#ffffff"] });
     } else if (!solo && d.winner === -1) sfx.coin(); else sfx.wrong();
     p.querySelectorAll(".res-pts b").forEach((el) => {
       const v = Number(el.dataset.total);
@@ -846,7 +858,7 @@
       else if (f.unranked === "bot") extra = '<div class="world"><span class="pill">Practice match</span><span>Bot games don\'t change ratings.</span></div>';
       else if (f.unranked === "friendly") extra = '<div class="world"><span class="pill">Friendly match</span><span>No rating change. Want a rematch?</span></div>';
       else if (S.players.some((p) => p.guest)) extra = '<div class="world"><span class="pill">Unranked</span><span>Matches with guests don\'t change ratings.</span></div>';
-      if (won) { sfx.fanfare(); DL.fx.rain(4, [PCOL[0], "#ffe14d", "#ffffff", "#b6f03c"]); } else if (tie) sfx.coin(); else sfx.wrong();
+      if (won) { sfx.fanfare(); DL.fx.rain(4, [PCOL[0], DL.pal().gold, "#ffffff", DL.pal().zest]); } else if (tie) sfx.coin(); else sfx.wrong();
       if (r) setTimeout(() => countUp($("ratingNum"), r.before, r.after, String), 600);
     }
     const stk = f.streaks ? f.streaks[S.me] : null;
@@ -1012,7 +1024,6 @@
     $("quitBtn").classList.remove("armed");
     goHome(false);
   });
-  $("homeBtn").addEventListener("click", () => { if (S.phase === "home") return; if (!$("scr-arena").hidden) return $("quitBtn").click(); goHome(true); });
   const muteBtn = $("muteBtn");
   const paintMute = () => { muteBtn.textContent = DL.audio.muted ? "Sound: Off" : "Sound: On"; muteBtn.setAttribute("aria-pressed", String(!DL.audio.muted)); };
   muteBtn.addEventListener("click", () => { DL.audio.toggle(); paintMute(); sfx.click(); });
@@ -1024,6 +1035,7 @@
     if (next === "zimrany") root.dataset.theme = "zimrany"; else delete root.dataset.theme;
     try { localStorage.setItem("dl-theme", next); } catch (e) {}
     paintTheme();
+    syncTheme();
     sfx.click();
   });
   paintTheme();
@@ -1077,7 +1089,7 @@
       if (pro || tries > 20) {
         clearInterval(poll);
         renderHome();
-        if (pro) { sfx.achievement(); DL.fx.rain(2.5, ["#ffe14d", "#ffffff", "#ff2e63"]); DL.fx.toast(DL.art.icon("crown"), "You're unlimited", "Unlimited games are on"); }
+        if (pro) { sfx.achievement(); DL.fx.rain(2.5, [DL.pal().gold, "#ffffff", DL.pal().hot]); DL.fx.toast(DL.art.icon("crown"), "You're unlimited", "Unlimited games are on"); }
         else DL.fx.toast(DL.art.icon("clock"), "Still processing", "Your plan switches on as soon as the payment is confirmed.");
       }
     }, 3000);

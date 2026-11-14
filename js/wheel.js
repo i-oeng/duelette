@@ -3,9 +3,9 @@ window.DL = window.DL || {};
 
 DL.Wheel = function (canvas) {
   const ctx = canvas.getContext("2d");
-  const INK = "#1b1035";
+  let INK = "#1b1035";
   const TAU = Math.PI * 2;
-  const FONT = '"Bungee", "Arial Black", Impact, sans-serif';
+  let FONT = '"Bungee", "Arial Black", Impact, sans-serif';
   let segs = [];
   let rot = 0;
   let spinning = false;
@@ -48,6 +48,8 @@ DL.Wheel = function (canvas) {
 
   function draw(now) {
     const s = size;
+    const P = DL.pal();
+    INK = P.ink; FONT = P.font;
     const cx = s / 2;
     const cy = s / 2 + s * 0.02;
     const outer = s / 2 - s * 0.06;
@@ -72,8 +74,8 @@ DL.Wheel = function (canvas) {
       const bx = cx + Math.cos(a) * (outer - rimW / 2);
       const by = cy + Math.sin(a) * (outer - rimW / 2);
       ctx.save();
-      if (on) { ctx.shadowColor = "#ffe14d"; ctx.shadowBlur = s * 0.03; }
-      ctx.fillStyle = on ? "#fff3a0" : "#6b4f00";
+      if (on) { ctx.shadowColor = P.glow; ctx.shadowBlur = s * 0.03; }
+      ctx.fillStyle = on ? P.bulbOn : P.bulbOff;
       circle(bx, by, rimW * 0.22); ctx.fill();
       ctx.restore();
     }
@@ -91,7 +93,7 @@ DL.Wheel = function (canvas) {
       if (segs[i].type === "jack") {
         // candy stripes on the jackpot wedge
         ctx.save(); ctx.clip();
-        ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = s * 0.02;
+        ctx.strokeStyle = P.stripe; ctx.lineWidth = s * 0.02;
         for (let k = 1; k < 7; k++) { ctx.beginPath(); ctx.arc(cx, cy, r * k / 7, a0, a0 + seg); ctx.stroke(); }
         ctx.restore();
       }
@@ -143,7 +145,7 @@ DL.Wheel = function (canvas) {
     }
 
     // hub with the current spinner's avatar
-    ctx.fillStyle = "#fff8e7";
+    ctx.fillStyle = P.paper;
     circle(cx, cy, r * 0.2); ctx.fill();
     ctx.lineWidth = Math.max(3, s * 0.012); ctx.strokeStyle = INK; ctx.stroke();
     if (hub && hub.complete && hub.naturalWidth) ctx.drawImage(hub, cx - r * 0.17, cy - r * 0.17, r * 0.34, r * 0.34);
@@ -158,7 +160,7 @@ DL.Wheel = function (canvas) {
     ctx.lineTo(s * 0.048, 0);
     ctx.lineTo(0, s * 0.105);
     ctx.closePath();
-    ctx.fillStyle = "#ff2e63";
+    ctx.fillStyle = P.pointer;
     ctx.fill();
     ctx.lineWidth = Math.max(3, s * 0.009); ctx.strokeStyle = INK; ctx.stroke();
     ctx.fillStyle = INK; circle(0, 0, s * 0.02); ctx.fill();

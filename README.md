@@ -46,7 +46,7 @@ Five spins make a game, about five minutes.
 
 The private bank holds 173 trivia questions, 34 myth or fact statements, 27 event pairs, 26 scam messages, 29 estimates and 50 code challenges (255 tests), each with an explanation or hints, plus Money Math problems generated on the fly.
 
-Two color themes: **Classic** (sunburst yellow) and **Zimrany**, in the violet of zimran.io, one of the Business Cup 2.0 organizers. The header button switches them; the choice is saved on the device.
+Two complete themes: **Classic** (sunburst yellow, sticker outlines, Bungee and Fredoka) and **Zimrany**, inspired by zimran.io, one of the Business Cup 2.0 organizers (violet, black and white, Unbounded and Manrope, soft shadows, pill buttons, its own wheel and logo colors). The header button switches them instantly; the choice is saved on the device.
 
 ## Business model
 

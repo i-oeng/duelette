@@ -94,6 +94,9 @@ DL.art = (function () {
   const pick = (i) => CRITTERS[((Number(i) || 0) % CRITTERS.length + CRITTERS.length) % CRITTERS.length];
 
   const cache = {};
+  const ZIM = { "#ffe14d": "#e2e2ed", "#ff2e63": "#5b42dc", "#1f6bff": "#2a1d7a", "#b6f03c": "#c9c2ff", "#ff7a00": "#7367ff",
+    "#8c52ff": "#5553f5", "#00c9c8": "#9d8fff", "#ffbe0b": "#9d8fff", "#e0b800": "#7367ff", "#1b1035": "#0c0c0c", "#ffd23f": "#c9c2ff" };
+  const tint = (m) => (DL.theme && DL.theme() === "zimrany" ? m.replace(/#[0-9a-fA-F]{6}/g, (h) => ZIM[h.toLowerCase()] || h) : m);
   function image(markup) {
     if (!cache[markup]) {
       const img = new Image();
@@ -109,10 +112,10 @@ DL.art = (function () {
     name: (i) => pick(i).name,
     // Inline SVG markup for an avatar, decorative unless a label is passed.
     avatar: (i, label) => svg(100, pick(i).body, label),
-    icon: (k) => svg(24, ICONS[k] || ICONS.sparkle),
+    icon: (k) => tint(svg(24, ICONS[k] || ICONS.sparkle)),
     // Image elements for canvas drawing (wheel hub and wedge icons).
     avatarImage: (i) => image(svg(100, pick(i).body, "", 200)),
-    iconImage: (k) => image(svg(24, ICONS[k] || ICONS.sparkle, "", 96)),
+    iconImage: (k) => image(tint(svg(24, ICONS[k] || ICONS.sparkle, "", 96))),
     // Avatar ids as stored on the world ranking server.
     toId: (i) => "c" + (Number(i) || 0),
     fromId: (id) => { const m = /^c(\d+)$/.exec(id || ""); return m ? Number(m[1]) % CRITTERS.length : 0; }

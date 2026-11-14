@@ -8,6 +8,7 @@ DL.fx = (function () {
   let running = false;
   let dpr = 1;
   const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const pal = () => (DL.pal ? DL.pal().confetti : PALETTE);
   const PALETTE = ["#ff2e63", "#1f6bff", "#b6f03c", "#ff7a00", "#8c52ff", "#00c9c8", "#ffe14d", "#ffffff"];
 
   function resize() {
@@ -59,7 +60,7 @@ DL.fx = (function () {
     }
     ctx.closePath();
     ctx.fill();
-    ctx.lineWidth = 1.5; ctx.strokeStyle = "#1b1035"; ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = DL.pal ? DL.pal().ink : "#1b1035"; ctx.stroke();
   }
 
   function kick() { if (!running) { running = true; requestAnimationFrame(loop); } }
@@ -67,7 +68,7 @@ DL.fx = (function () {
   function burst(x, y, opt) {
     const o = opt || {};
     const n = reduced ? 12 : (o.count || 80);
-    const colors = o.colors || PALETTE;
+    const colors = o.colors || pal();
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const s = (o.power || 9) * (0.4 + Math.random());
@@ -94,7 +95,7 @@ DL.fx = (function () {
         parts.push({
           x: Math.random() * innerWidth, y: -20, vx: (Math.random() - 0.5) * 3, vy: 2 + Math.random() * 3,
           g: 0.06, drag: 0.995, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3,
-          size: 10 + Math.random() * 10, color: (colors || PALETTE)[Math.floor(Math.random() * (colors || PALETTE).length)],
+          size: 10 + Math.random() * 10, color: (colors || pal())[Math.floor(Math.random() * (colors || pal()).length)],
           shape: Math.random() < 0.2 ? 2 : 0, life: 400
         });
       }
