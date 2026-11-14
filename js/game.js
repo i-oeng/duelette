@@ -923,7 +923,7 @@
         (pr.newBadges.length ? '<p class="new-line">New badge' + (pr.newBadges.length > 1 ? "s" : "") + ": " + pr.newBadges.map((k) => esc((ACH[k] || [0, k])[1].split(":")[0])).join(", ") + "</p>" : "") +
         (pr.unlocked.length ? '<p class="new-line">New critter unlocked: ' + pr.unlocked.map((c) => esc(DL.art.name(DL.art.fromId(c)))).join(", ") + "</p>" : "") + "</div>";
     }
-    if (!solo && f.rematch && S.session) buttons = [["Rematch", "btn-go", askRematch], buttons[0], buttons[2]];
+    if (!solo && f.rematch && S.session) buttons = [["Rematch", "btn-go", askRematch], [buttons[0][0], "btn-p1", buttons[0][2]], buttons[2]];
     const plan = f.plans ? f.plans[S.me] : null;
     if (plan && !plan.pro) {
       extra += '<p class="plan-note">' + (plan.left ? plan.left + " free " + (plan.left === 1 ? "game" : "games") + " left today." : "That was your last free game today. More in " + untilReset(plan.resetAt) + ".") + "</p>";
