@@ -949,3 +949,9 @@ html[data-theme="zimrany"] #spinBtn:hover { box-shadow: 0 14px 34px rgba(12, 6, 
   #scr-home:not(.out) #meCard .guest-form { grid-template-columns: 1fr; }
 }
 html[data-theme="zimrany"] .keys-hint kbd { color: #0c0c0c; }
+/* Zimrany: about 10% more compact than its first version (text, buttons, logo) */
+html[data-theme="zimrany"] { font-size-adjust: 0.5; }
+html[data-theme="zimrany"] .btn { padding: 8px 16px; font-size: 15px; }
+html[data-theme="zimrany"] .btn-sm { padding: 6px 12px; font-size: 12px; }
+html[data-theme="zimrany"] .btn-big { padding: 11px 26px; font-size: 20px; }
+html[data-theme="zimrany"] .logo { font-size: clamp(38px, 9vw, 92px); }

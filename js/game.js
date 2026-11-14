@@ -67,7 +67,7 @@
     ["scr-home", "scr-arena", "scr-final", "scr-rank"].forEach((s) => ($(s).hidden = s !== id));
     const inGame = id === "scr-arena";
     $("quitBtn").hidden = !inGame;
-    $("quitBtn").textContent = S.mode === "duel" ? "Forfeit" : "Quit run";
+    paintQuit();
     $("rankBtn").hidden = inGame;
     window.scrollTo(0, 0);
   }
@@ -537,7 +537,7 @@
     if (S.session) { S.session.leave(); S.session = null; } // leaving a finished duel ends its rematch offer
     S.gen++;
     S.chain = Promise.resolve();
-    Object.assign(S, { mode, round: 1, rounds: 5, mult: 1, spinner: 0, jackCount: 0, unlocked: new Set(), wonRound: false, cat: null, mod: null });
+    Object.assign(S, { mode, round: 1, rounds: 5, mult: 1, spinner: 0, jackCount: 0, unlocked: new Set(), wonRound: false, cat: null, mod: null, spun: false });
     DL.ui.clearOpp();
     DL.games.reset();
   }
@@ -645,7 +645,7 @@
   async function onMatch(d) {
     clearInterval(searchTick);
     if (S.phase === "final") { // a rematch on the same connection
-      Object.assign(S, { round: 1, mult: 1, spinner: 0, jackCount: 0, unlocked: new Set(), wonRound: false, cat: null, mod: null });
+      Object.assign(S, { round: 1, mult: 1, spinner: 0, jackCount: 0, unlocked: new Set(), wonRound: false, cat: null, mod: null, spun: false });
       DL.ui.clearOpp();
       DL.games.reset();
       show("scr-arena");
@@ -710,6 +710,8 @@
     if (S.phase !== "spin" || wheel.spinning || $("scr-arena").hidden || !S.session) return;
     if (S.mode === "duel" && S.spinner !== S.me) return;
     S.phase = "spinning";
+    S.spun = true; // the server spins now, so from here on leaving counts
+    paintQuit();
     $("spinBtn").disabled = true;
     $("spinBtn").classList.remove("pulse");
     S.session.act("spin");
@@ -718,6 +720,8 @@
   }
 
   async function onSpin(d) {
+    S.spun = true;
+    paintQuit();
     const gen = S.gen;
     clearTimeout(spinRetry);
     S.phase = "spinning";
@@ -869,6 +873,12 @@
 
   function finalScreen(f) {
     if (S.phase === "final") return;
+    if (f.cancelled) {
+      const who = S.players[f.by] && f.by !== S.me ? S.players[f.by].name : "";
+      goHome(false);
+      if (who) DL.fx.toast(DL.art.icon("sparkle"), who + " left before the first spin", "The game didn't count and your free game is back.");
+      return;
+    }
     S.phase = "final";
     clearInterval(searchTick);
     if (S.session && !f.rematch) { S.session.close(); S.session = null; }
@@ -1094,17 +1104,24 @@
 
   /* ---------------- Controls ---------------- */
   let quitArmed = 0;
+  // Before the first spin nothing has been revealed, so leaving is free: no confirmation, no game used.
+  const freeToLeave = () => S.phase === "search" || S.phase === "final" || (S.round === 1 && !S.spun);
+  function paintQuit() {
+    if ($("quitBtn").classList.contains("armed")) return;
+    $("quitBtn").textContent = freeToLeave() && S.phase !== "final" ? "Back" : S.mode === "duel" ? "Forfeit" : "Quit run";
+  }
   $("quitBtn").addEventListener("click", () => {
-    const atStake = S.phase !== "search" && S.phase !== "final";
-    if (atStake && Date.now() - quitArmed > 3000) {
+    if (!freeToLeave() && Date.now() - quitArmed > 3000) {
       quitArmed = Date.now();
       $("quitBtn").textContent = S.mode === "duel" ? "Tap again: you lose" : "Tap again to quit";
       $("quitBtn").classList.add("armed");
-      setTimeout(() => { $("quitBtn").textContent = S.mode === "duel" ? "Forfeit" : "Quit run"; $("quitBtn").classList.remove("armed"); }, 3000);
+      setTimeout(() => { $("quitBtn").classList.remove("armed"); paintQuit(); }, 3000);
       return;
     }
+    const refund = S.phase !== "search" && S.phase !== "final" && S.round === 1 && !S.spun && !S.daily;
     $("quitBtn").classList.remove("armed");
     goHome(false);
+    if (refund) DL.fx.toast(DL.art.icon("sparkle"), "No game used", "You left before the first spin, so it didn't count.");
   });
   const muteBtn = $("muteBtn");
   const paintMute = () => { muteBtn.textContent = DL.audio.muted ? "Sound: Off" : "Sound: On"; muteBtn.setAttribute("aria-pressed", String(!DL.audio.muted)); };

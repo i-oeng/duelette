@@ -119,6 +119,7 @@ class Game:
         self.earned = [set() for _ in seats]                 # badges earned this game
         self.rematch = set()
         self.rematch_until = 0
+        self.spun = False  # until the first spin nothing is revealed, so leaving costs nothing
 
     def send(self, event, data):
         for s in self.seats:
@@ -364,6 +365,7 @@ class Engine:
 
     def _spin(self, g, auto):
         now = time.time()
+        g.spun = True
         idx = g.rng.randrange(len(WHEEL))
         forced = os.environ.get("DUELETTE_FORCE_CAT", "")  # testing only
         if forced in WHEEL:
@@ -801,7 +803,22 @@ class Engine:
     def _forfeit(self, g, idx):
         if g.phase == "over":
             return
+        if not g.spun and g.round == 1:
+            self._cancel(g, idx)
+            return
         g.send("final", self._finalize(g, idx))
+
+    def _cancel(self, g, idx):
+        """Someone left before the first spin: the game doesn't count for anyone and free games come back."""
+        g.phase = "over"
+        g.deadline = time.time()
+        for s in g.seats:
+            if not s.bot and not g.daily:
+                self.store.refund_play(s.key)
+        g.send("final", {"cancelled": True, "by": idx, "scores": list(g.scores),
+                         "plans": [None if s.bot else self.store.quota(s.key) for s in g.seats]})
+        for s in g.seats:
+            s.done = True
 
     def _ticker(self):
         while True:

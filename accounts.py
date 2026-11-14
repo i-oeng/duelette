@@ -623,6 +623,12 @@ class Store:
                             "ON CONFLICT(key, day) DO UPDATE SET count = count + 1", (key, day))
             self.db.commit()
 
+    def refund_play(self, key):
+        """Give back today's counted game (the player left before anything was revealed)."""
+        with self.lock:
+            self.db.execute("UPDATE plays SET count = MAX(0, count - 1) WHERE key = ? AND day = ?", (key, today()[0]))
+            self.db.commit()
+
     def create_codes(self, count, days):
         codes = []
         with self.lock:
