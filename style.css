@@ -913,3 +913,39 @@ html[data-theme="zimrany"] .btn-quit.armed { --c: var(--bad); color: #ffffff; }
 #scr-home:not(.out) #authCard { order: 3; }
 #scr-home:not(.out) .keys-hint { order: 4; }
 html[data-theme="zimrany"] .keys-hint { color: #f2f2f2; }
+/* Zimrany: buttons must stand out on violet and on white cards */
+html[data-theme="zimrany"] .btn { border-color: rgba(12, 12, 12, .22); }
+html[data-theme="zimrany"] .btn-ghost { --c: #e2e2ed; }
+html[data-theme="zimrany"] #spinBtn { --c: #ffffff; color: #5b42dc; border-color: #ffffff; box-shadow: 0 10px 28px rgba(12, 6, 50, .45); }
+html[data-theme="zimrany"] #spinBtn:hover { box-shadow: 0 14px 34px rgba(12, 6, 50, .55); }
+
+/* ===== Home dashboard: You (left), Play (center), Today (right) ===== */
+.home-play { display: contents; }
+.today-card { width: 100%; max-width: 560px; --pc: var(--trivia); }
+.today-title { margin: 0; font-family: var(--f-display); font-size: 18px; font-weight: 400; letter-spacing: .02em; }
+.level-box { margin: 2px 0 0; }
+#scr-home:not(.out) .home-play { order: 1; }
+#scr-home:not(.out) #todayCard { order: 3; }
+@media (min-width: 1100px) {
+  #scr-home:not(.out) {
+    display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr) minmax(0, 330px);
+    column-gap: 22px; row-gap: 18px; align-items: start; justify-items: stretch;
+  }
+  #scr-home:not(.out) > * { order: 0; }
+  #scr-home:not(.out) > .logo,
+  #scr-home:not(.out) > .tagline,
+  #scr-home:not(.out) > #inviteCard,
+  #scr-home:not(.out) > #legacyCard,
+  #scr-home:not(.out) > #authCard,
+  #scr-home:not(.out) > .keys-hint { grid-column: 1 / -1; justify-self: center; }
+  #scr-home:not(.out) > #meCard { grid-column: 1; max-width: none; order: 1; }
+  #scr-home:not(.out) > .home-play { grid-column: 2; order: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  #scr-home:not(.out) > #todayCard { grid-column: 3; max-width: none; order: 1; }
+  #scr-home:not(.out) > .keys-hint { order: 2; }
+  #scr-home:not(.out) .home-play .modes { grid-template-columns: 1fr; max-width: none; }
+  #scr-home:not(.out) .home-play .daily-card { max-width: none; }
+  #scr-home:not(.out) .home-play .mode-card { min-height: 0; }
+  #scr-home:not(.out) #meCard .avatars { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  #scr-home:not(.out) #meCard .guest-form { grid-template-columns: 1fr; }
+}
+html[data-theme="zimrany"] .keys-hint kbd { color: #0c0c0c; }

@@ -201,6 +201,7 @@
     $("offlineNote").hidden = DL.net.online;
     $("authCard").hidden = !DL.net.online || (!!me && !showLogin);
     $("meCard").hidden = !me;
+    $("todayCard").hidden = !me;
     $("soloBtn").disabled = !DL.net.online;
     $("matchBtn").disabled = !DL.net.online;
     $("friendBtn").disabled = !DL.net.online;
@@ -316,9 +317,11 @@
   function renderProgress(p) {
     const box = $("progBox");
     box.hidden = !p;
+    $("levelBox").hidden = !p;
     if (!p) return;
     const all = Object.keys(ACH);
-    box.innerHTML = xpRow(p.level, p.into, p.need) +
+    $("levelBox").innerHTML = xpRow(p.level, p.into, p.need);
+    box.innerHTML =
       '<h3 class="prog-title">Today\'s quests<span class="prog-hint">' + (p.allDone ? "All done! See you tomorrow" : "+50 XP each, +100 for all three") + "</span></h3>" + questList(p.quests) +
       '<h3 class="prog-title">Badges<span class="prog-hint">' + p.badges.length + " of " + all.length + " collected</span></h3>" +
       '<div class="badge-row">' + all.map((k) => { const has = p.badges.includes(k); return '<span class="badge-dot' + (has ? " has" : "") + '" title="' + esc(ACH[k][1]) + (has ? "" : " (not yet)") + '">' + DL.art.icon(ACH[k][0]) + "</span>"; }).join("") + "</div>";

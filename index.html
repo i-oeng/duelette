@@ -99,6 +99,7 @@
           <div class="me-text"><div class="me-name"><span id="meName"></span> <span class="streak-chip" id="streakChip" hidden></span></div><div class="me-stats" id="meStats"></div></div>
           <button class="btn btn-sm btn-ghost" id="logoutBtn" type="button">Log out</button>
         </div>
+        <div class="level-box" id="levelBox" hidden></div>
         <div class="guest-box" id="guestBox" hidden>
           <p class="guest-title"><b>Playing as a guest.</b> Save your progress to keep your mastery and best scores and to join the world ranking.</p>
           <form id="upgradeForm" class="guest-form" novalidate>
@@ -112,8 +113,6 @@
           <button class="text-btn" id="toLoginBtn" type="button">Have an account? Log in</button>
         </div>
         <p class="plan-line" id="planLine" hidden></p>
-        <div class="prog" id="progBox" hidden></div>
-        <div class="mastery" id="mastery"></div>
         <details class="critter-pick" id="renameBox"><summary>Change your name</summary>
           <form id="renameForm" class="guest-form rename-form" novalidate>
             <div class="field"><label for="newName" class="field-label">New name</label>
@@ -130,6 +129,7 @@
         </details>
       </div>
 
+      <div class="home-play" id="homePlay">
       <div class="daily-card" id="dailyCard" hidden></div>
 
       <div class="modes">
@@ -151,6 +151,13 @@
       </div>
       <p class="mode-note" id="modeNote" role="status">No account needed: press play and you're in. Create an account to save your progress and join the world ranking.</p>
       <p class="mode-note" id="offlineNote" hidden>This is an offline copy. Open the hosted link to play: the server runs and judges every game.</p>
+      </div>
+
+      <div class="pcard today-card" id="todayCard" hidden>
+        <h2 class="today-title">Today</h2>
+        <div class="prog" id="progBox" hidden></div>
+        <div class="mastery" id="mastery"></div>
+      </div>
       <p class="keys-hint"><kbd>Space</kbd> spins · <kbd>1</kbd> to <kbd>4</kbd> answer trivia · <kbd>Ctrl</kbd> + <kbd>Enter</kbd> runs code</p>
     </section>
 
