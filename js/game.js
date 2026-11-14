@@ -322,7 +322,7 @@
     const all = Object.keys(ACH);
     $("levelBox").innerHTML = xpRow(p.level, p.into, p.need);
     box.innerHTML =
-      '<h3 class="prog-title">Today\'s quests<span class="prog-hint">' + (p.allDone ? "All done! See you tomorrow" : "+50 XP each, +100 for all three") + "</span></h3>" + questList(p.quests) +
+      '<h3 class="prog-title">Quests<span class="prog-hint">' + (p.allDone ? "All done! See you tomorrow" : "+50 XP each, +100 for all three") + "</span></h3>" + questList(p.quests) +
       '<h3 class="prog-title">Badges<span class="prog-hint">' + p.badges.length + " of " + all.length + " collected</span></h3>" +
       '<div class="badge-row">' + all.map((k) => { const has = p.badges.includes(k); return '<span class="badge-dot' + (has ? " has" : "") + '" title="' + esc(ACH[k][1]) + (has ? "" : " (not yet)") + '">' + DL.art.icon(ACH[k][0]) + "</span>"; }).join("") + "</div>";
   }
