@@ -230,6 +230,7 @@
       $("meAv").innerHTML = DL.art.avatar(i);
     }, me.progress && me.progress.critters);
     renderProgress(me.progress);
+    renderReview(me.review);
   }
 
   /* ---------------- Plan, Pro and mastery ---------------- */
@@ -326,6 +327,51 @@
       '<h3 class="prog-title">Badges<span class="prog-hint">' + p.badges.length + " of " + all.length + " collected</span></h3>" +
       '<div class="badge-row">' + all.map((k) => { const has = p.badges.includes(k); return '<span class="badge-dot' + (has ? " has" : "") + '" title="' + esc(ACH[k][1]) + (has ? "" : " (not yet)") + '">' + DL.art.icon(ACH[k][0]) + "</span>"; }).join("") + "</div>";
   }
+  function reviewCurve(r) {
+    if (!r.curve.some((c) => c.tries)) return "";
+    const names = ["1st review", "2nd review", "3rd and later"];
+    return '<div class="rv-curve" role="img" aria-label="Accuracy on questions you had missed: ' + r.curve.map((c, i) => names[i] + " " + (c.pct == null ? "no data yet" : c.pct + "%")).join(", ") + '">' +
+      r.curve.map((c, i) => '<div class="rv-col"><span class="rv-bar"><span style="height:' + (c.pct || 0) + '%"></span></span><b>' + (c.pct == null ? "?" : c.pct + "%") + "</b><small>" + names[i] + "</small></div>").join("") +
+      '</div><p class="rv-cap">How often you get a missed question right when it comes back</p>';
+  }
+  function renderReview(r) {
+    const box = $("reviewBox");
+    box.hidden = !r;
+    if (!r) return;
+    const member = r.access === "member";
+    const credit = r.access === "credit";
+    let action = "";
+    if (r.due > 0 && (member || credit)) action = '<button class="btn btn-go btn-sm" id="reviewBtn" type="button">Review ' + Math.min(r.due, 5) + " now" + (credit ? " (free)" : "") + "</button>";
+    else if (r.due > 0) action = '<button class="btn btn-jack btn-sm" id="reviewLock" type="button">Unlock Smart Review</button>';
+    const status = r.open ? r.open + " saved · " + r.mastered + " mastered" + (r.due ? " · " + r.due + " ready now" : r.next ? " · next in " + untilReset(r.next) : "")
+      : r.mastered ? r.mastered + " mastered · nothing left to fix" : "Questions you miss land here, ready to review.";
+    const note = credit ? "Free session earned: #" + r.credits[0].rank + " in Daily Duel #" + r.credits[0].num + "!" : member ? "" : "Included in Mensis and Annum. A top 3 finish in a Daily Duel earns a free session.";
+    box.innerHTML = '<h3 class="prog-title">Smart Review' + (member ? "" : '<span class="tok pro-tok">Members</span>') + '</h3><p class="rv-status">' + esc(status) + "</p>" +
+      (note ? '<p class="rv-note">' + esc(note) + "</p>" : "") + action + reviewCurve(r);
+    const b = $("reviewBtn");
+    if (b) b.addEventListener("click", () => start("review"));
+    const l = $("reviewLock");
+    if (l) l.addEventListener("click", () => openPaywall(DL.net.me && DL.net.me.plan, "review"));
+  }
+  function reviewFinal(f) {
+    const r = f.review;
+    const pr = f.progress ? f.progress[S.me] : null;
+    const more = r.due > 0 && r.access;
+    const buttons = (more ? [["Review " + Math.min(r.due, 5) + " more", "btn-go", () => start("review")]] : [])
+      .concat([["Play a game", more ? "btn-p1" : "btn-go", () => start("solo")], ["Home", "btn-ghost", () => goHome(true)]]);
+    const scr = $("scr-final");
+    scr.innerHTML = '<div class="card final-card"><div class="card-body center">' + crowned(av(mine())) +
+      '<h2 class="final-title" style="--pc:' + PCOL[0] + '">Review done</h2><p class="card-sub">You fixed ' + r.fixed + " of " + r.asked + ". " +
+      (r.newlyMastered ? r.newlyMastered + " mastered for good! " : "") + (r.open ? r.open + " still in your notebook" + (r.due ? ", " + r.due + " ready now." : ".") : "Your notebook is empty. Nice!") + "</p>" +
+      reviewCurve(r) + (pr ? '<div class="final-prog">' + xpRow(pr.level, pr.levelUp ? 0 : pr.intoBefore, pr.need, "<b>+" + pr.gain + " XP</b>") + questList(pr.quests, pr.fresh) + "</div>" : "") +
+      '</div><div class="card-actions">' + buttons.map((b, i) => '<button class="btn btn-big ' + b[1] + '" type="button" data-b="' + i + '">' + b[0] + "</button>").join("") + "</div></div>";
+    scr.querySelectorAll("[data-b]").forEach((el) => el.addEventListener("click", () => buttons[Number(el.dataset.b)][2](el)));
+    show("scr-final");
+    sfx.fanfare();
+    if (r.fixed) DL.fx.rain(2);
+    if (pr) celebrateProgress(pr);
+    DL.net.loadMe().then(renderHome);
+  }
   function dailyShareText(d, st) {
     return "Duelette Daily #" + d.num + ": " + d.score + " pts" + (d.beat != null ? ", beat " + d.beat + "% of players" : "") + (d.rank ? ", #" + d.rank + " today" : "") +
       (st && st.count > 1 ? ", " + st.count + "-day streak" : "") + ". Can you beat it? " + location.origin + location.pathname;
@@ -411,11 +457,13 @@
     renderHome();
     showRecovery(r.data.recovery, true);
   }
-  function openPaywall(plan) {
+  function openPaywall(plan, reason) {
     const me = DL.net.me;
     const guest = !me || !!me.guest;
     const p = plan || (me && me.plan);
-    $("pwSub").textContent = p && !p.pro && p.left === 0
+    $("pwSub").textContent = reason === "review"
+      ? "Smart Review is part of Mensis and Annum: every question you miss comes back until you master it. Or finish in the top 3 of a Daily Duel to earn a free review session."
+      : p && !p.pro && p.left === 0
       ? "You played your " + p.limit + " free games today. They come back in " + untilReset(p.resetAt) + ", or upgrade to keep playing now."
       : "Play as much as you like, every day.";
     renderPlans();
@@ -537,7 +585,7 @@
     if (S.session) { S.session.leave(); S.session = null; } // leaving a finished duel ends its rematch offer
     S.gen++;
     S.chain = Promise.resolve();
-    Object.assign(S, { mode, round: 1, rounds: 5, mult: 1, spinner: 0, jackCount: 0, unlocked: new Set(), wonRound: false, cat: null, mod: null, spun: false });
+    Object.assign(S, { mode, round: 1, rounds: 5, mult: 1, spinner: 0, jackCount: 0, unlocked: new Set(), wonRound: false, cat: null, mod: null, spun: false, review: false });
     DL.ui.clearOpp();
     DL.games.reset();
   }
@@ -555,9 +603,9 @@
       }
       renderHome();
     }
-    if (kind !== "daily" && me.plan && !me.plan.pro && me.plan.left === 0) { openPaywall(me.plan); return; }
+    if (kind !== "daily" && kind !== "review" && me.plan && !me.plan.pro && me.plan.left === 0) { openPaywall(me.plan); return; }
     DL.audio.ensure();
-    const mode = kind === "solo" || kind === "daily" ? "solo" : "duel";
+    const mode = kind === "solo" || kind === "daily" || kind === "review" ? "solo" : "duel";
     resetGame(mode);
     S.kind = kind;
     const gen = S.gen;
@@ -591,10 +639,10 @@
     }, code);
     if (gen !== S.gen) { if (session.leave) session.leave(); return; }
     if (session.room) showRoom(session.room);
-    if (session.error === "limit") {
+    if (session.error === "limit" || session.error === "review_locked") {
       clearInterval(searchTick);
       goHome(false);
-      openPaywall(session.plan);
+      openPaywall(session.plan, session.error === "review_locked" ? "review" : null);
       return;
     }
     if (session.error) {
@@ -604,7 +652,8 @@
         already_playing: "You already have a game open in another tab or device.",
         daily_done: "You already played today's Daily Duel. A new one starts at midnight (US Eastern).",
         expired: "That challenge link has expired. Ask your friend for a new one.",
-        own_challenge: "That's your own challenge link. Send it to a friend!"
+        own_challenge: "That's your own challenge link. Send it to a friend!",
+        nothing_due: "Nothing to review right now. Missed questions come back here when they are due."
       }[session.error] || ERR[session.error] || ERR.network;
       $("modeNote").hidden = false;
       $("modeNote").textContent = msg;
@@ -660,6 +709,16 @@
     S.botMatch = !!d.bot;
     S.daily = d.daily || null;
     renderHud();
+    if (d.review) { // Smart Review: straight to the questions you missed, no wheel
+      S.review = true;
+      S.spun = true;
+      paintQuit();
+      mount('<div class="card">' + catHead("review", '<span class="pill">' + d.review + (d.review === 1 ? " question" : " questions") + "</span>") +
+        '<div class="card-body center"><h2 class="card-title">Smart Review</h2><p class="card-sub">These are questions you missed before. Get one right and it comes back in a day, then in three; three right in a row and it is mastered.</p></div></div>');
+      sfx.fanfare();
+      S.phase = "play";
+      return;
+    }
     if (!d.solo) {
       const side = (p, cls) =>
         '<div class="vs-side" data-p="' + cls + '"><div class="big-av" style="--pc:' + PCOL[cls] + '">' + DL.art.avatar(av(p)) + "</div>" +
@@ -882,6 +941,7 @@
     S.phase = "final";
     clearInterval(searchTick);
     if (S.session && !f.rematch) { S.session.close(); S.session = null; }
+    if (f.review) return reviewFinal(f);
     const solo = S.mode === "solo";
     const me = S.me;
     const o = 1 - me;
@@ -935,6 +995,12 @@
       extra += '<div class="final-prog">' + xpRow(pr.level, pr.levelUp ? 0 : pr.intoBefore, pr.need, "<b>+" + pr.gain + " XP</b>") + questList(pr.quests, pr.fresh) +
         (pr.newBadges.length ? '<p class="new-line">New badge' + (pr.newBadges.length > 1 ? "s" : "") + ": " + pr.newBadges.map((k) => esc((ACH[k] || [0, k])[1].split(":")[0])).join(", ") + "</p>" : "") +
         (pr.unlocked.length ? '<p class="new-line">New critter unlocked: ' + pr.unlocked.map((c) => esc(DL.art.name(DL.art.fromId(c)))).join(", ") + "</p>" : "") + "</div>";
+    }
+    const missed = f.missed ? f.missed[S.me] : 0;
+    if (missed) {
+      const member = !!(DL.net.me && DL.net.me.plan && DL.net.me.plan.pro);
+      extra += '<p class="plan-note rv-saved">' + missed + (missed === 1 ? " missed question" : " missed questions") + " saved to Smart Review." +
+        (member ? " Review them from the home screen." : " Members review them anytime; a top 3 Daily Duel finish earns a free session.") + "</p>";
     }
     if (!solo && f.rematch && S.session) buttons = [["Rematch", "btn-go", askRematch], [buttons[0][0], "btn-p1", buttons[0][2]], buttons[2]];
     const plan = f.plans ? f.plans[S.me] : null;

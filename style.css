@@ -955,3 +955,18 @@ html[data-theme="zimrany"] .btn { padding: 8px 16px; font-size: 15px; }
 html[data-theme="zimrany"] .btn-sm { padding: 6px 12px; font-size: 12px; }
 html[data-theme="zimrany"] .btn-big { padding: 11px 26px; font-size: 20px; }
 html[data-theme="zimrany"] .logo { font-size: clamp(38px, 9vw, 92px); }
+
+/* v12: Smart Review */
+.review-box { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; padding: 10px 12px; border: 2px solid var(--edge); border-radius: 14px; background: var(--paper-2); }
+.review-box .prog-title { margin: 0; }
+.review-box .pro-tok { margin-left: 4px; }
+.rv-status { margin: 0; font-size: 14px; font-weight: 700; }
+.rv-note { margin: 0; font-size: 13px; color: var(--muted); }
+.rv-curve { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; width: 100%; max-width: 360px; margin: 6px auto 0; }
+.rv-col { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.rv-bar { width: 34px; height: 64px; border: 2px solid var(--edge); border-radius: 8px; background: var(--paper); display: flex; align-items: flex-end; overflow: hidden; }
+.rv-bar span { display: block; width: 100%; background: linear-gradient(0deg, var(--good), var(--photo)); transition: height 1s ease-out; }
+.rv-col b { font-size: 14px; }
+.rv-col small { font-size: 11px; color: var(--muted); text-align: center; }
+.rv-cap { margin: 0; width: 100%; text-align: center; font-size: 12px; color: var(--muted); }
+.rv-saved { font-weight: 700; color: var(--ink); }

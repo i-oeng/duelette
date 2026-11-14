@@ -319,10 +319,10 @@ class Handler(BaseHTTPRequestHandler):
             ok = store.set_avatar(key, data.get("avatar"))
             return self.send_json(200 if ok else 400, {"ok": ok})
         if path == "/api/play":
-            mode = data.get("mode") if data.get("mode") in ("solo", "daily", "duel", "friend", "join") else "duel"
+            mode = data.get("mode") if data.get("mode") in ("solo", "daily", "duel", "friend", "join", "review") else "duel"
             ticket, err, room = engine.play(key, mode, data.get("code"))
-            if err == "limit":
-                return self.send_json(402, {"error": "limit", "plan": store.quota(key)})
+            if err in ("limit", "review_locked"):
+                return self.send_json(402, {"error": err, "plan": store.quota(key)})
             if err:
                 return self.send_json(410 if err == "expired" else 409, {"error": err})
             return self.send_json(201, {"ticket": ticket, "room": room})

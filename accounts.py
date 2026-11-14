@@ -73,6 +73,11 @@ BADGES = ["firstBlood", "hatTrick", "unstoppable", "bigBrain", "speedDemon", "cl
 # Critters: the first four are free, the rest unlock. (kind, threshold)
 FREE_CRITTERS = ["c0", "c1", "c2", "c3"]
 CRITTER_UNLOCKS = {"c4": ("level", 3), "c5": ("level", 5), "c6": ("streak", 7), "c7": ("level", 8)}
+# Smart Review: a missed question comes back now, then 1 day and 3 days after each right answer;
+# three right reviews in a row and it is mastered. A wrong review starts it over in 10 minutes.
+REVIEW_GAPS = [0, 86400, 3 * 86400]
+REVIEW_RETRY = 600
+REVIEW_SESSION = 5
 
 
 def level_for(xp):
@@ -189,6 +194,13 @@ class Store:
                 self.db.execute("ALTER TABLE accounts ADD COLUMN %s %s" % (name, ddl))
         self.db.execute("CREATE TABLE IF NOT EXISTS quest_log (key TEXT NOT NULL, day TEXT NOT NULL, quest TEXT NOT NULL, "
                         "progress INTEGER NOT NULL, PRIMARY KEY (key, day, quest))")
+        self.db.execute("CREATE TABLE IF NOT EXISTS mistakes (key TEXT NOT NULL, item TEXT NOT NULL, cat TEXT NOT NULL, "
+                        "box INTEGER NOT NULL, due REAL NOT NULL, misses INTEGER NOT NULL, created REAL NOT NULL, "
+                        "mastered INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (key, item))")
+        self.db.execute("CREATE TABLE IF NOT EXISTS review_log (key TEXT NOT NULL, item TEXT NOT NULL, nth INTEGER NOT NULL, "
+                        "correct INTEGER NOT NULL, ts REAL NOT NULL)")
+        self.db.execute("CREATE TABLE IF NOT EXISTS review_credits (key TEXT NOT NULL, day TEXT NOT NULL, rank INTEGER NOT NULL, "
+                        "used INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (key, day))")
         self.db.execute("CREATE TABLE IF NOT EXISTS checkouts (ref TEXT PRIMARY KEY, key TEXT NOT NULL, created REAL NOT NULL)")
         self.db.execute("CREATE TABLE IF NOT EXISTS daily_scores (day TEXT NOT NULL, key TEXT NOT NULL, score INTEGER NOT NULL, "
                         "ts REAL NOT NULL, PRIMARY KEY (day, key))")
@@ -752,7 +764,7 @@ class Store:
                     "rank": self._duel_rank(r["rating"]) if played and ranked else None,
                     "soloBest": r["solo_best"], "soloRuns": r["solo_runs"],
                     "soloRank": self._solo_rank(r["solo_best"]) if r["solo_runs"] and ranked else None,
-                    "plan": plan, "mastery": self.mastery(key), "progress": self._progress_view(r)}
+                    "plan": plan, "mastery": self.mastery(key), "progress": self._progress_view(r), "review": self.review_summary(key)}
 
     # ---------------------------------------------------------- progress: XP, quests, badges, critters
 
@@ -774,6 +786,93 @@ class Store:
                 "quests": quests, "allDone": bonus, "badges": [b for b in BADGES if b in (r["badges"] or "").split(",")],
                 "critters": critters_unlocked(level, r["best_streak"]),
                 "next": [{"id": cid, "kind": kind, "need": need} for cid, (kind, need) in sorted(CRITTER_UNLOCKS.items())]}
+
+    # ---------------------------------------------------------- Smart Review
+
+    def add_mistake(self, key, item, cat):
+        now = time.time()
+        with self.lock:
+            self.db.execute("INSERT INTO mistakes (key, item, cat, box, due, misses, created) VALUES (?, ?, ?, 0, ?, 1, ?) "
+                            "ON CONFLICT(key, item) DO UPDATE SET box = 0, due = ?, misses = misses + 1, mastered = 0",
+                            (key, item, cat, now, now, now))
+            self.db.commit()
+
+    def due_mistakes(self, key, limit=REVIEW_SESSION):
+        with self.lock:
+            return [(r["item"], r["cat"]) for r in self.db.execute(
+                "SELECT item, cat FROM mistakes WHERE key = ? AND mastered = 0 AND due <= ? ORDER BY due LIMIT ?",
+                (key, time.time(), limit))]
+
+    def review_result(self, key, item, correct):
+        """Record one review answer and schedule the next one. Returns 'mastered', 'up' or 'again'."""
+        now = time.time()
+        with self.lock:
+            r = self.db.execute("SELECT box FROM mistakes WHERE key = ? AND item = ?", (key, item)).fetchone()
+            if not r:
+                return None
+            nth = self.db.execute("SELECT COUNT(*) FROM review_log WHERE key = ? AND item = ?", (key, item)).fetchone()[0] + 1
+            self.db.execute("INSERT INTO review_log (key, item, nth, correct, ts) VALUES (?, ?, ?, ?, ?)", (key, item, nth, int(correct), now))
+            if correct:
+                box = r["box"] + 1
+                if box >= len(REVIEW_GAPS):
+                    self.db.execute("UPDATE mistakes SET box = ?, mastered = 1 WHERE key = ? AND item = ?", (box, key, item))
+                    out = "mastered"
+                else:
+                    self.db.execute("UPDATE mistakes SET box = ?, due = ? WHERE key = ? AND item = ?", (box, now + REVIEW_GAPS[box], key, item))
+                    out = "up"
+            else:
+                self.db.execute("UPDATE mistakes SET box = 0, due = ?, misses = misses + 1 WHERE key = ? AND item = ?", (now + REVIEW_RETRY, key, item))
+                out = "again"
+            self.db.commit()
+            return out
+
+    def review_credits(self, key):
+        """Unused free review sessions. A finished day's Daily Duel in the top 3 (ranked players) earns one."""
+        day = today()[0]
+        with self.lock:
+            r = self.db.execute("SELECT guest FROM accounts WHERE key = ?", (key,)).fetchone()
+            if not r or r["guest"]:
+                return []
+            for row in self.db.execute("SELECT day, score FROM daily_scores WHERE key = ? AND day < ? ORDER BY day DESC LIMIT 7",
+                                       (key, day)).fetchall():
+                if self.db.execute("SELECT 1 FROM review_credits WHERE key = ? AND day = ?", (key, row["day"])).fetchone():
+                    continue
+                rank = self.db.execute("SELECT COUNT(*) + 1 FROM daily_scores d JOIN accounts a ON a.key = d.key "
+                                       "WHERE d.day = ? AND a.guest = 0 AND d.score > ?", (row["day"], row["score"])).fetchone()[0]
+                if rank <= 3:
+                    self.db.execute("INSERT INTO review_credits (key, day, rank) VALUES (?, ?, ?)", (key, row["day"], rank))
+            self.db.commit()
+            return [{"day": c["day"], "num": daily_number(c["day"]), "rank": c["rank"]} for c in self.db.execute(
+                "SELECT day, rank FROM review_credits WHERE key = ? AND used = 0 ORDER BY day", (key,))]
+
+    def review_access(self, key):
+        """'member' (Mensis or Annum), 'credit' (a top 3 Daily Duel reward) or None."""
+        if self.is_pro(key):
+            return "member"
+        return "credit" if self.review_credits(key) else None
+
+    def use_review_credit(self, key):
+        with self.lock:
+            self.db.execute("UPDATE review_credits SET used = 1 WHERE rowid = (SELECT rowid FROM review_credits "
+                            "WHERE key = ? AND used = 0 ORDER BY day LIMIT 1)", (key,))
+            self.db.commit()
+
+    def review_summary(self, key):
+        now = time.time()
+        credits = self.review_credits(key)
+        member = self.is_pro(key)
+        with self.lock:
+            due = self.db.execute("SELECT COUNT(*) FROM mistakes WHERE key = ? AND mastered = 0 AND due <= ?", (key, now)).fetchone()[0]
+            open_ = self.db.execute("SELECT COUNT(*) FROM mistakes WHERE key = ? AND mastered = 0", (key,)).fetchone()[0]
+            mastered = self.db.execute("SELECT COUNT(*) FROM mistakes WHERE key = ? AND mastered = 1", (key,)).fetchone()[0]
+            nxt = self.db.execute("SELECT MIN(due) FROM mistakes WHERE key = ? AND mastered = 0 AND due > ?", (key, now)).fetchone()[0]
+            curve = []
+            for n in (1, 2, 3):
+                cond = "nth >= 3" if n == 3 else "nth = %d" % n
+                row = self.db.execute("SELECT COUNT(*), SUM(correct) FROM review_log WHERE key = ? AND " + cond, (key,)).fetchone()
+                curve.append({"nth": n, "tries": row[0], "pct": round(100 * (row[1] or 0) / row[0]) if row[0] else None})
+            return {"due": due, "open": open_, "mastered": mastered, "next": nxt, "curve": curve,
+                    "access": "member" if member else "credit" if credits else None, "credits": credits}
 
     def apply_progress(self, key, stats, earned, score, won, daily):
         """Credit one finished game: XP, quest progress, badges, unlocks. Returns what changed."""

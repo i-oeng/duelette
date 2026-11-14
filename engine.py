@@ -40,7 +40,10 @@ QCATS = {
     "first": {"n": 5, "time": 8, "fast": 5, "tag": "%d/%d in order", "ev": "timeLord", "bot": 0.65,
               "ask": "Which came first?", "relay": "Picked pair "},
     "math": {"n": 4, "time": 15, "fast": 8, "tag": "%d/%d solved", "ev": "mathWhiz", "bot": 0.6, "relay": "Solved problem "},
+    # Smart Review: questions you missed before, each shown in its own mode
+    "review": {"n": 5, "time": 14, "fast": 14, "tag": "%d/%d fixed", "ev": "reviewer", "bot": 0.6, "relay": "Reviewed "},
 }
+REVIEWABLE = ("trivia", "scam", "myth", "first", "math")
 HINT_COST = 0.2  # each code hint takes 20% off that round's points
 TARGET = 0.65     # aim for questions a player gets right about 65% of the time
 SPIN_WAIT = 30    # seconds before an idle spinner's wheel spins itself
@@ -145,6 +148,7 @@ class Engine:
         }
         self.code = content["code"]
         self.mods = content["mods"]
+        self.by_id = {it["id"]: (cat, it) for cat in ("trivia", "scam", "myth", "first") for it in self.banks[cat]}
         self.lock = threading.RLock()
         self.seats = {}
         self.waiting = []
@@ -183,7 +187,17 @@ class Engine:
                     return None, "expired", None
                 if host.key == key:
                     return None, "own_challenge", None
-            if mode == "daily":
+            review = None
+            if mode == "review":
+                access = self.store.review_access(key)
+                if not access:
+                    return None, "review_locked", None
+                review = self._review_items(key)
+                if not review:
+                    return None, "nothing_due", None
+                if access == "credit":
+                    self.store.use_review_credit(key)
+            elif mode == "daily":
                 if self.store.daily_done(key):
                     return None, "daily_done", None
             elif not self.store.can_play(key):
@@ -194,6 +208,9 @@ class Engine:
             seat = Seat(key, profile)
             self.seats[seat.id] = seat
             self.active[key] = seat
+            if mode == "review":
+                self._start([seat], True, review=review)
+                return seat.id, None, None
             if mode in ("solo", "daily"):
                 self._start([seat], True, daily=today()[0] if mode == "daily" else None)
                 return seat.id, None, None
@@ -274,20 +291,37 @@ class Engine:
 
     # ---------------------------------------------------------- game flow
 
-    def _start(self, seats, solo, daily=None, friendly=False):
+    def _review_items(self, key):
+        rng = random.Random()
+        items = []
+        for item_id, cat in self.store.due_mistakes(key):
+            if cat == "math" and item_id.startswith("m-") and item_id[2:] in mathgen.TEMPLATES:
+                it = mathgen.problem(rng, item_id[2:])  # a fresh problem of the same kind: practice the skill, not the answer
+                items.append(dict(it, _cat="math", topic=self.topics.get("finance", "Finance"), tkey="finance"))
+            elif item_id in self.by_id:
+                c, it = self.by_id[item_id]
+                items.append(dict(it, _cat=c))
+        return items
+
+    def _start(self, seats, solo, daily=None, friendly=False, review=None):
         rng = random.Random("duelette-daily-" + daily) if daily else random.Random()
         g = Game(seats, solo, rng)
         g.daily, g.friendly = daily, friendly
+        g.review = review
         self.games.append(g)
         for i, s in enumerate(seats):
             s.game, s.idx = g, i
-            if not s.bot and not daily:
+            if not s.bot and not daily and not review:
                 self.store.use_play(s.key)
+        if review:  # one round of your missed questions, no wheel
+            g.rounds, g.spun = 1, True
+            g.phase, g.at = "reveal", time.time() + 2.5
+            g.ch = {"cat": "review", "mod": None, "token": secrets.token_hex(4)}
         players = [s.info() for s in seats]
         for s in seats:
             s.push("match", {"seat": s.idx, "players": players, "rounds": g.rounds, "round": 1, "spinner": g.spinner,
                              "solo": solo, "daily": daily, "friendly": friendly, "bot": bool(g.bot), "wheel": WHEEL,
-                             "plan": self.store.quota(s.key)})
+                             "plan": self.store.quota(s.key), "review": len(review) if review else 0})
 
     def _start_bot(self, seat):
         if seat.id in self.waiting:
@@ -400,11 +434,13 @@ class Engine:
         if cat in QCATS:
             cfg = QCATS[cat]
             count = cfg["n"] + (1 if mod_id == "extra" else 0)
-            if cat == "math":
+            if cat == "review":
+                qs = g.review
+            elif cat == "math":
                 qs = [dict(it, topic=self.topics.get("finance", "Finance"), tkey="finance") for it in mathgen.make(g.rng, count)]
             else:
                 qs = self._pick(self.banks[cat], g, count)
-            ch.update(qs=qs, qtime=cfg["fast"] if mod_id == "speed" else cfg["time"], qmax=ROUND_MAX // cfg["n"],
+            ch.update(qs=qs, qtime=cfg["fast"] if mod_id == "speed" else cfg["time"], qmax=ROUND_MAX // (len(qs) if cat == "review" else cfg["n"]),
                       penalty=PENALTY if mod_id == "sudden" else 0, right=[0] * n)
             self._send_q(g, 0)
         elif cat == "guess":
@@ -433,6 +469,21 @@ class Engine:
                 finish(g)
                 self._finish_round(g)
 
+    def _note(self, g, seat, item, correct):
+        """Smart Review bookkeeping: misses go into the notebook; review answers move it along."""
+        if seat.bot:
+            return
+        cat = item.get("_cat") or g.ch.get("cat")
+        if g.review:
+            res = self.store.review_result(seat.key, item["id"], correct)
+            if res == "mastered":
+                g.stats[seat.idx]["mastered"] += 1
+            elif res == "up" and correct:
+                g.stats[seat.idx]["fixed"] += 1
+        elif not correct and cat in REVIEWABLE:
+            self.store.add_mistake(seat.key, item["id"], cat)
+            g.stats[seat.idx]["missed"] += 1
+
     def _record(self, seat, item, score):
         if not seat.bot:  # bots must not move question difficulty or anyone's mastery
             self.store.record_answer(seat.key, item["id"], item["tkey"], score)
@@ -441,9 +492,9 @@ class Engine:
 
     def _send_q(self, g, i):
         ch, now = g.ch, time.time()
-        cat = ch["cat"]
-        cfg = QCATS[cat]
         item = ch["qs"][i]
+        cat = item.get("_cat") or ch["cat"]
+        cfg = QCATS[cat]
         if cfg.get("fixed"):
             opts = list(cfg["fixed"])
         else:
@@ -455,6 +506,9 @@ class Engine:
                "opts": opts, "time": ch["qtime"]}
         if cfg.get("kicker"):
             msg["kicker"] = cfg["kicker"]
+        if ch["cat"] == "review":
+            msg["review"] = True
+            msg["kicker"] = "Review: you missed this one before"
         if cat == "scam":
             msg["scam"] = {"channel": item["channel"], "from": item["from"], "body": item["body"], "context": item.get("context", "")}
         g.send("q", msg)
@@ -474,8 +528,9 @@ class Engine:
         g.raw[seat.idx] += gain
         if correct:
             ch["right"][seat.idx] += 1
-            g.stats[seat.idx]["right_" + ch["cat"]] += 1
+            g.stats[seat.idx]["right_" + (item.get("_cat") or ch["cat"])] += 1
         self._record(seat, item, 1.0 if correct else 0.0)
+        self._note(g, seat, item, correct)
         for o in g.others(seat):
             o.push("relay", {"round": g.round, "text": QCATS[ch["cat"]].get("relay", "Answered question ") + str(ch["qi"] + 1)})
         if all(p is not None for p in ch["picks"]):
@@ -487,6 +542,7 @@ class Engine:
         for i, p in enumerate(ch["picks"]):
             if p is None:
                 self._record(g.seats[i], item, 0.0)
+                self._note(g, g.seats[i], item, False)
         ch.update(stage="gap", next_at=time.time() + GAP)
         g.send("qres", {"round": g.round, "i": ch["qi"], "answer": ch["answer"], "picks": ch["picks"],
                         "gains": ch["gains"], "why": item.get("why", "")})
@@ -760,7 +816,11 @@ class Engine:
         g.deadline = time.time()
         out = {"scores": list(g.scores), "forfeit": forfeit_seat, "winner": -1, "ratings": None, "solo": None,
                "daily": None, "unranked": None, "streaks": [None] * len(g.seats)}
-        if g.solo:
+        if g.solo and g.review:
+            st = g.stats[0]
+            out["review"] = dict(self.store.review_summary(g.seats[0].key), fixed=st["fixed"] + st["mastered"],
+                                 newlyMastered=st["mastered"], asked=len(g.review))
+        elif g.solo:
             if forfeit_seat is None:
                 out["solo"] = self.store.apply_solo(g.seats[0].key, g.scores[0])
                 if g.daily:
@@ -780,7 +840,8 @@ class Engine:
             if not seat.bot and i != forfeit_seat:  # finishing a game keeps the daily streak alive
                 out["streaks"][i] = self.store.touch_streak(seat.key)
                 st = g.stats[i]
-                st["games"] += 1
+                if not g.review:
+                    st["games"] += 1
                 if g.daily:
                     st["daily"] += 1
                 if g.scores[i] >= 600:
@@ -792,6 +853,7 @@ class Engine:
                     g.earned[i].add("jackpotJunkie")
                 out["progress"][i] = self.store.apply_progress(seat.key, st, g.earned[i], g.scores[i], won, bool(g.daily))
         out["plans"] = [None if seat.bot else self.store.quota(seat.key) for seat in g.seats]
+        out["missed"] = [g.stats[i]["missed"] for i in range(len(g.seats))]
         if not g.solo and forfeit_seat is None:
             g.rematch_until = time.time() + REMATCH_WAIT
             out["rematch"] = REMATCH_WAIT

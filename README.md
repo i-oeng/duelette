@@ -48,6 +48,7 @@ Five spins make a game, about five minutes.
 - **Daily percentile**: "You beat 72% of today's players", on the result screen and in the share text.
 - **Mastery meters** per topic (Finance, History, Science, Geography, Tech, Culture, Scam spotting): the chance you'd answer a typical question right, and how far it moved since you started.
 - **Questions that fit you**: every question carries a difficulty rating that moves like a chess rating, and each player gets questions they answer right about 65% of the time.
+- **Smart Review**: every question you miss is saved to your notebook and comes back in a short review session: right away, then 1 day and 3 days later; three right in a row and it is mastered (Money Math serves a fresh problem of the same kind). A chart on the profile shows how often you get a missed question right on its 1st, 2nd and 3rd review: proof, from your own data, that you learned it.
 - Badges, jackpots, win streaks and a world ranking.
 
 The private bank holds 173 trivia questions, 34 myth or fact statements, 27 event pairs, 26 scam messages, 29 estimates and 50 code challenges (255 tests), each with an explanation or hints, plus Money Math problems generated on the fly.
@@ -56,8 +57,8 @@ Two complete themes: **Classic** (sunburst yellow, sticker outlines, Bungee and 
 
 ## Business model
 
-- **Free**: the Daily Duel plus 3 games a day. Guests can play instantly and save their progress later.
-- **Paid** (Lemon Squeezy, merchant of record): **Mensis** $4.99 a month or **Annum** $39.99 a year. Unlimited games, Streak Freeze (one missed day a week is forgiven), and a Member badge.
+- **Free**: the Daily Duel plus 3 games a day. Guests can play instantly and save their progress later. A top 3 finish in a Daily Duel earns a free Smart Review session.
+- **Paid** (Lemon Squeezy, merchant of record): **Mensis** $4.99 a month or **Annum** $39.99 a year. Unlimited games, Smart Review of every mistake, Streak Freeze (one missed day a week is forgiven), and a Member badge.
 - Growth: friend challenge links and shareable Daily Duel results bring new players for free.
 
 ## Fair play: scores can't be faked
